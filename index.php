@@ -27,7 +27,7 @@ $container['db'] = function () {
 
 $app = new Slim\App($container);
 
-$app->get('/api/activities', function(Request $request, Response $response) {
+$app->get('/activities', function(Request $request, Response $response) {
     $activities = [];
     foreach ($this->db->query('SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id GROUP BY activity.id ORDER BY started_at DESC') as $row) {
         if ($row['tags'] === '[null]') {
@@ -50,7 +50,7 @@ $app->get('/api/activities', function(Request $request, Response $response) {
     return $response->withJson($activities);
 });
 
-$app->get('/api/activities/{id}', function(Request $request, Response $response, array $args) {
+$app->get('/activities/{id}', function(Request $request, Response $response, array $args) {
     $sth = $this->db->prepare('SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE activity.id = ? GROUP BY activity.id ORDER BY started_at DESC');
     $sth->execute([$args['id']]);
     $row = $sth->fetch();
@@ -72,7 +72,7 @@ $app->get('/api/activities/{id}', function(Request $request, Response $response,
     return $response->withJson($row);
 });
 
-$app->post('/api/activities', function(Request $request, Response $response) {
+$app->post('/activities', function(Request $request, Response $response) {
     try {
         $this->db->beginTransaction();
 
@@ -128,7 +128,7 @@ $app->post('/api/activities', function(Request $request, Response $response) {
     }
 });
 
-$app->put('/api/activities/{id:\d+}', function(Request $request, Response $response, array $args) {
+$app->put('/activities/{id:\d+}', function(Request $request, Response $response, array $args) {
     $data = $request->getParsedBody();
 
     $activity = [];
@@ -188,7 +188,7 @@ $app->put('/api/activities/{id:\d+}', function(Request $request, Response $respo
     }
 });
 
-$app->delete('/api/activities/{id:\d+}', function(Request $request, Response $response, array $args) {
+$app->delete('/activities/{id:\d+}', function(Request $request, Response $response, array $args) {
     try {
         $this->db->beginTransaction();
 
