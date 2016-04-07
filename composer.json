@@ -11,5 +11,12 @@
     "require": {
         "robmorgan/phinx": "^0.5.1",
         "slim/slim": "^3.1"
+    },
+    "scripts": {
+        "migrate": "phinx migrate",
+        "seed": [
+            "phinx seed:run -s TagSeeder",
+            "phinx seed:run -s ActivitySeeder"
+        ]
     }
 }
