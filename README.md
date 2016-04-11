@@ -1,5 +1,7 @@
 # Tiima
 
+[![Code Climate](https://codeclimate.com/github/siiptuo/tiima-api/badges/gpa.svg)](https://codeclimate.com/github/siiptuo/tiima-api)
+
 Tiima is a time tracking software. This repository contains the backend REST
 API created using PHP and PostgreSQL.
 
