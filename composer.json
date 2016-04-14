@@ -10,7 +10,8 @@
     ],
     "require": {
         "robmorgan/phinx": "^0.5.1",
-        "slim/slim": "^3.1"
+        "slim/slim": "^3.1",
+        "firebase/php-jwt": "^3.0"
     },
     "scripts": {
         "migrate": "phinx migrate",

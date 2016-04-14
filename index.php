@@ -2,8 +2,11 @@
 
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
+use \Firebase\JWT\JWT;
 
 require 'vendor/autoload.php';
+
+define('JWT_SECRET', 'Tiima secret');
 
 function getTags($pdo, $tagId) {
     $sth = $pdo->prepare('SELECT array_to_json(array_agg(tag2.title) || tag1.title) FROM tag tag1 LEFT JOIN related_tag ON related_tag.tag_id = tag1.id LEFT JOIN tag AS tag2 ON tag2.id = related_tag.related_tag_id WHERE tag1.id = ? GROUP BY tag1.id');
@@ -27,9 +30,50 @@ $container['db'] = function () {
 
 $app = new Slim\App($container);
 
+$app->post('/login', function(Request $request, Response $response) {
+    $data = $request->getParsedBody();
+    if (empty($data['username'])) {
+        return $response->withJson(['error' => 'username required'], 400);
+    }
+    if (empty($data['password'])) {
+        return $response->withJson(['error' => 'password required'], 400);
+    }
+
+    $sth = $this->db->prepare('SELECT * FROM "user" WHERE username = ?');
+    $sth->execute([$data['username']]);
+    $user = $sth->fetch();
+
+    if (!password_verify($data['password'], $user['password'])) {
+        return $response->withJson(['error' => 'wrong password'], 401);
+    }
+
+    $payload = ['user_id' => $user['id']];
+    $token = JWT::encode($payload, JWT_SECRET);
+
+    return $response->withJson(['token' => $token], 200);
+});
+
+$jwtMiddleware = function ($request, $response, $next) use ($container) {
+    if (!$request->hasHeader('Authorization')) {
+        return $response->withJson(['error' => 'no token'], 400);
+    }
+    list($type, $token) = explode(' ', $request->getHeaderLine('Authorization'));
+    if (empty($type) || empty($token) || $type !== 'Bearer') {
+        return $response->withJson(['error' => 'invalid autorization header'], 400);
+    }
+    try {
+        $container['jwt'] = JWT::decode($token, JWT_SECRET, ['HS256']);
+    } catch (Exception $e) {
+        return $response->withJson(['error' => $e->getMessage()], 401);
+    }
+    return $next($request, $response);
+};
+
 $app->get('/activities', function(Request $request, Response $response) {
     $activities = [];
-    foreach ($this->db->query('SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id GROUP BY activity.id ORDER BY started_at DESC') as $row) {
+    $sth = $this->db->prepare('SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE user_id = ? GROUP BY activity.id ORDER BY started_at DESC');
+    $sth->execute([$this->jwt->user_id]);
+    foreach ($sth->fetchAll() as $row) {
         if ($row['tags'] === '[null]') {
             $row['tags'] = [];
         } else {
@@ -48,11 +92,11 @@ $app->get('/activities', function(Request $request, Response $response) {
     }
 
     return $response->withJson($activities);
-});
+})->add($jwtMiddleware);
 
 $app->get('/activities/{id}', function(Request $request, Response $response, array $args) {
-    $sth = $this->db->prepare('SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE activity.id = ? GROUP BY activity.id ORDER BY started_at DESC');
-    $sth->execute([$args['id']]);
+    $sth = $this->db->prepare('SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE activity.id = ? AND activity.user_id = ? GROUP BY activity.id ORDER BY started_at DESC');
+    $sth->execute([$args['id'], $this->jwt->user_id]);
     $row = $sth->fetch();
     if ($row['tags'] === '[null]') {
         $row['tags'] = [];
@@ -70,7 +114,7 @@ $app->get('/activities/{id}', function(Request $request, Response $response, arr
     }
 
     return $response->withJson($row);
-});
+})->add($jwtMiddleware);
 
 $app->post('/activities', function(Request $request, Response $response) {
     try {
@@ -84,11 +128,12 @@ $app->post('/activities', function(Request $request, Response $response) {
         $activity['finished_at'] = $data['finished_at'];
         $activity['tags'] = $data['tags'];
 
-        $sth = $this->db->prepare('INSERT INTO activity (title, started_at, finished_at) VALUES (?, ?, ?) RETURNING id');
+        $sth = $this->db->prepare('INSERT INTO activity (title, started_at, finished_at, user_id) VALUES (?, ?, ?, ?) RETURNING id');
         $sth->execute([
             $activity['title'],
             $activity['started_at'],
             $activity['finished_at'],
+            $this->jwt->user_id,
         ]);
         $activity['id'] = $sth->fetchColumn();
 
@@ -126,7 +171,7 @@ $app->post('/activities', function(Request $request, Response $response) {
 
         return $response->withJson(['error' => $e->getMessage()], 500);
     }
-});
+})->add($jwtMiddleware);
 
 $app->put('/activities/{id:\d+}', function(Request $request, Response $response, array $args) {
     $data = $request->getParsedBody();
@@ -141,13 +186,18 @@ $app->put('/activities/{id:\d+}', function(Request $request, Response $response,
     try {
         $this->db->beginTransaction();
 
-        $sth = $this->db->prepare('UPDATE activity SET title = ?, started_at = ?, finished_at = ? WHERE id = ?');
+        $sth = $this->db->prepare('UPDATE activity SET title = ?, started_at = ?, finished_at = ? WHERE id = ? AND user_id = ?');
         $sth->execute([
             $activity['title'],
             $activity['started_at'],
             $activity['finished_at'],
             $activity['id'],
+            $this->jwt->user_id,
         ]);
+
+        if ($sth->rowCount() !== 1) {
+            return $response->withJson(['error' => 'activity not found'], 404);
+        }
 
         $sth = $this->db->prepare('DELETE FROM activity_tag WHERE activity_id = ?');
         $sth->execute([$activity['id']]);
@@ -186,11 +236,20 @@ $app->put('/activities/{id:\d+}', function(Request $request, Response $response,
 
         return $response->withJson(['error' => $e->getMessage()], 500);
     }
-});
+})->add($jwtMiddleware);
 
 $app->delete('/activities/{id:\d+}', function(Request $request, Response $response, array $args) {
     try {
         $this->db->beginTransaction();
+
+        $sth = $this->db->prepare('SELECT * FROM activity WHERE id = ? AND user_id = ?');
+        $sth->execute([
+            $args['id'],
+            $this->jwt->user_id,
+        ]);
+        if ($sth->rowCount() !== 1) {
+            return $response->withJson(['error' => 'activity not found'], 404);
+        }
 
         $sth = $this->db->prepare('DELETE FROM activity_tag WHERE activity_id = ?');
         $sth->execute([$args['id']]);
@@ -206,6 +265,6 @@ $app->delete('/activities/{id:\d+}', function(Request $request, Response $respon
 
         return $response->withJson(['error' => $e->getMessage()], 500);
     }
-});
+})->add($jwtMiddleware);
 
 $app->run();
