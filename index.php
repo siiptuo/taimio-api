@@ -21,7 +21,7 @@ $container = new Slim\Container([
 ]);
 
 $container['db'] = function () {
-    return new PDO('pgsql:dbname=tiima', 'tuomas', '', [
+    return new PDO('pgsql:dbname='.getenv('TIIMA_DBNAME'), getenv('TIIMA_USERNAME'), getenv('TIIMA_PASSWORD'), [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_EMULATE_PREPARES => false,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -65,11 +65,11 @@ $app->add($corsMiddleware);
 
 $jwtMiddleware = function ($request, $response, $next) use ($container) {
     if (!$request->hasHeader('Authorization')) {
-        return $response->withJson(['error' => 'no token'], 400);
+        return $response->withJson(['error' => 'no token'], 401);
     }
     list($type, $token) = explode(' ', $request->getHeaderLine('Authorization'));
     if (empty($type) || empty($token) || $type !== 'Bearer') {
-        return $response->withJson(['error' => 'invalid autorization header'], 400);
+        return $response->withJson(['error' => 'invalid autorization header'], 401);
     }
     try {
         $container['jwt'] = JWT::decode($token, JWT_SECRET, ['HS256']);
@@ -108,6 +108,9 @@ $app->get('/activities/{id}', function(Request $request, Response $response, arr
     $sth = $this->db->prepare('SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE activity.id = ? AND activity.user_id = ? GROUP BY activity.id ORDER BY started_at DESC');
     $sth->execute([$args['id'], $this->jwt->user_id]);
     $row = $sth->fetch();
+    if ($row === false) {
+        return $response->withJson(['error' => 'not found'], 404);
+    }
     if ($row['tags'] === '[null]') {
         $row['tags'] = [];
     } else {

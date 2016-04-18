@@ -13,3 +13,11 @@ environments:
         user: ''
         pass: ''
         charset: utf8
+
+    testing:
+        adapter: pgsql
+        host: localhost
+        name: tiima_test
+        user: ''
+        pass: ''
+        charset: utf8
