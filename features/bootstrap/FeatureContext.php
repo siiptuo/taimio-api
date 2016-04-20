@@ -49,6 +49,27 @@ class FeatureContext implements Context, SnippetAcceptingContext
     }
 
     /**
+     * @When I request :arg1 with data:
+     */
+    public function iRequestWithData($arg1, TableNode $table)
+    {
+        list($method, $url) = explode(' ', $arg1, 2);
+        $headers = [];
+        if (isset($this->token)) {
+            $headers['Authorization'] = "Bearer $this->token";
+        }
+        $data = [];
+        foreach ($table as $row) {
+            $data[$row['property']] = $row['value'];
+        }
+        $this->response = $this->client->request($method, "localhost:9000$url", [
+            'http_errors' => false,
+            'headers' => $headers,
+            'json' => $data,
+        ]);
+    }
+
+    /**
      * @Then I get :statusCode response
      */
     public function iGetResponse($statusCode)
@@ -59,12 +80,30 @@ class FeatureContext implements Context, SnippetAcceptingContext
     /**
      * @Given there is a user named :user
      */
-    public function thereIsAUserNamed($user)
+    public function thereIsAUserNamed($username)
     {
+        $password = password_hash('1234', PASSWORD_DEFAULT);
         $sth = $this->db->prepare('INSERT INTO "user" (username, password) VALUES (?, ?) RETURNING id');
-        $sth->execute([$user, '1234']);
-        $this->users[$user] = [
+        $sth->execute([$username, $password]);
+        $this->users[$username] = [
             'id' => $sth->fetchColumn(),
+            'username' => $username,
+            'password' => $password,
+        ];
+    }
+
+    /**
+     * @Given these is a user named :username with password :password
+     */
+    public function theseIsAUserNamedWithPassword($username, $password)
+    {
+        $password = password_hash($password, PASSWORD_DEFAULT);
+        $sth = $this->db->prepare('INSERT INTO "user" (username, password) VALUES (?, ?) RETURNING id');
+        $sth->execute([$username, $password]);
+        $this->users[$username] = [
+            'id' => $sth->fetchColumn(),
+            'username' => $username,
+            'password' => $password,
         ];
     }
 
@@ -106,6 +145,15 @@ class FeatureContext implements Context, SnippetAcceptingContext
         $data = json_decode($this->response->getBody(), true);
         PHPUnit_Framework_Assert::assertInternalType('array', $data);
         PHPUnit_Framework_Assert::assertCount(intval($count), $data);
+    }
+
+    /**
+     * @Then The response contains property :arg1
+     */
+    public function theResponseContainsProperty($arg1)
+    {
+        $data = json_decode($this->response->getBody(), true);
+        PHPUnit_Framework_Assert::assertArrayHasKey($arg1, $data);
     }
 
     /**

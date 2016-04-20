@@ -43,6 +43,10 @@ $app->post('/login', function(Request $request, Response $response) {
     $sth->execute([$data['username']]);
     $user = $sth->fetch();
 
+    if ($user === false) {
+        return $response->withJson(['error' => 'invalid username'], 401);
+    }
+
     if (!password_verify($data['password'], $user['password'])) {
         return $response->withJson(['error' => 'wrong password'], 401);
     }
