@@ -84,9 +84,21 @@ $jwtMiddleware = function ($request, $response, $next) use ($container) {
 };
 
 $app->get('/activities', function(Request $request, Response $response) {
+    $queryParams = $request->getQueryParams();
+
+    $sql = 'SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE user_id = ?';
+    $params = [$this->jwt->user_id];
+
+    if (isset($queryParams['date'])) {
+        $sql .= ' AND started_at::date = ?';
+        $params[] = $queryParams['date'];
+    }
+
+    $sql .= ' GROUP BY activity.id ORDER BY started_at DESC';
+
     $activities = [];
-    $sth = $this->db->prepare('SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE user_id = ? GROUP BY activity.id ORDER BY started_at DESC');
-    $sth->execute([$this->jwt->user_id]);
+    $sth = $this->db->prepare($sql);
+    $sth->execute($params);
     foreach ($sth->fetchAll() as $row) {
         if ($row['tags'] === '[null]') {
             $row['tags'] = [];
