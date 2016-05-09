@@ -82,6 +82,9 @@ class FeatureContext implements Context, SnippetAcceptingContext
      */
     public function thereIsAUserNamed($username)
     {
+        if (isset($this->users[$username])) {
+            return;
+        }
         $password = password_hash('1234', PASSWORD_DEFAULT);
         $sth = $this->db->prepare('INSERT INTO "user" (username, password) VALUES (?, ?) RETURNING id');
         $sth->execute([$username, $password]);
@@ -163,5 +166,23 @@ class FeatureContext implements Context, SnippetAcceptingContext
     {
         $data = json_decode($this->response->getBody(), true);
         PHPUnit_Framework_Assert::assertEquals($value, $data[$property]);
+    }
+
+    /**
+     * @Given there are activities:
+     */
+    public function thereAreActivities(TableNode $activityTable)
+    {
+        foreach ($activityTable as $activityHash) {
+            $this->thereIsAUserNamed($activityHash['user']);
+            $sth = $this->db->prepare('INSERT INTO activity (title, started_at, finished_at, user_id) VALUES (?, ?, ?, ?)');
+            $sth->execute([
+                $activityHash['title'],
+                $activityHash['started_at'],
+                $activityHash['finished_at'],
+                $this->users[$activityHash['user']]['id'],
+            ]);
+            // TODO: tags
+        }
     }
 }

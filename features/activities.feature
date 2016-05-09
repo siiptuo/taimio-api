@@ -1,10 +1,10 @@
 Feature: Activities
     Background:
-        Given there is a user named "mika"
-        And user "mika" has an activity "hello world #first #test"
-        And user "mika" has an activity "second activity #second"
-        And there is a user named "heikki"
-        And user "heikki" has an activity "my activity #hello"
+        Given there are activities:
+            | user   | started_at       | finished_at      | title           | tags          |
+            | mika   | 2016-05-09 10:00 | 2016-05-09 10:00 | hello world     | first, test   |
+            | mika   | 2016-05-09 12:00 | 2016-05-09 13:00 | second activity | second, hello |
+            | heikki | 2016-05-09 10:00 | 2016-05-09 10:00 | my activity     | hello         |
 
     Scenario: Fail to list activities
         When I request "GET /activities"
