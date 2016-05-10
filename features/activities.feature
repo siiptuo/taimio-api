@@ -57,6 +57,18 @@ Feature: Activities
         Then I get "200" response
         And The response is an array that contains 0 items
 
+    Scenario Outline: Filter activities between dates
+        Given I have token for user "mika"
+        When I request "GET /activities?start_date=<start_date>&end_date=<end_date>"
+        Then I get "200" response
+        And The response is an array that contains <count> items
+
+        Examples:
+            | start_date | end_date   | count |
+            | 2016-05-08 | 2016-05-08 | 0     |
+            | 2016-05-08 | 2016-05-09 | 2     |
+            | 2016-05-10 | 2016-05-11 | 1     |
+
     Scenario: Filter activities by tag
         Given I have token for user "mika"
         When I request "GET /activities?tag=test"

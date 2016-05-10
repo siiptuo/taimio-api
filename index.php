@@ -92,6 +92,10 @@ $app->get('/activities', function(Request $request, Response $response) {
     if (isset($queryParams['date'])) {
         $sql .= ' AND started_at::date = ?';
         $params[] = $queryParams['date'];
+    } elseif (isset($queryParams['start_date']) && isset($queryParams['end_date'])) {
+        $sql .= ' AND started_at::date >= ? AND started_at::date <= ?';
+        $params[] = $queryParams['start_date'];
+        $params[] = $queryParams['end_date'];
     }
 
     $sql .= ' GROUP BY activity.id ORDER BY started_at DESC';
