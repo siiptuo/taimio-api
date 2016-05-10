@@ -45,21 +45,21 @@ Feature: Activities
         When I request "GET /activities/1"
         Then I get "404" response
 
-    Scenario: Filter activities by date
+    Scenario Outline: Filter activities between dates
         Given I have token for user "mika"
-        When I request "GET /activities?date=2016-05-09"
+        When I request "GET /activities?start_date=<start_date>&end_date=<end_date>"
         Then I get "200" response
-        And The response is an array that contains 2 items
+        And The response is an array that contains <count> items
 
-    Scenario: Filter empty activities by date
-        Given I have token for user "mika"
-        When I request "GET /activities?date=2016-05-08"
-        Then I get "200" response
-        And The response is an array that contains 0 items
+        Examples:
+            | start_date | end_date   | count |
+            | 2016-05-08 | 2016-05-08 | 0     |
+            | 2016-05-08 | 2016-05-09 | 2     |
+            | 2016-05-10 | 2016-05-11 | 1     |
 
-    Scenario Outline: Invalid date format
+    Scenario Outline: Invalid date formats
         Given I have token for user "mika"
-        When I request "GET /activities?date=<date>"
+        When I request "GET /activities?start_date=<date>&end_date=<date>"
         Then I get "400" response
         And The response property "error" contains "invalid date format"
 
@@ -73,18 +73,6 @@ Feature: Activities
             | today      |
             | now        |
             | 2016-05-32 |
-
-    Scenario Outline: Filter activities between dates
-        Given I have token for user "mika"
-        When I request "GET /activities?start_date=<start_date>&end_date=<end_date>"
-        Then I get "200" response
-        And The response is an array that contains <count> items
-
-        Examples:
-            | start_date | end_date   | count |
-            | 2016-05-08 | 2016-05-08 | 0     |
-            | 2016-05-08 | 2016-05-09 | 2     |
-            | 2016-05-10 | 2016-05-11 | 1     |
 
     Scenario: Filter activities by tag
         Given I have token for user "mika"
