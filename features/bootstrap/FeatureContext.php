@@ -19,6 +19,8 @@ class FeatureContext implements Context, SnippetAcceptingContext
             PDO::ATTR_EMULATE_PREPARES => false,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
+        $this->users = [];
+        $this->tags = [];
     }
 
     /**
@@ -27,9 +29,11 @@ class FeatureContext implements Context, SnippetAcceptingContext
     public function after(AfterScenarioScope $scope)
     {
         $this->db->query('TRUNCATE activity RESTART IDENTITY CASCADE');
-        $this->db->query('TRUNCATE "user" RESTART IDENTITY CASCADE');
+        $this->db->query('TRUNCATE activity_tag RESTART IDENTITY CASCADE');
         $this->db->query('TRUNCATE tag RESTART IDENTITY CASCADE');
+        $this->db->query('TRUNCATE "user" RESTART IDENTITY CASCADE');
         $this->users = [];
+        $this->tags = [];
     }
 
     /**
@@ -175,14 +179,24 @@ class FeatureContext implements Context, SnippetAcceptingContext
     {
         foreach ($activityTable as $activityHash) {
             $this->thereIsAUserNamed($activityHash['user']);
-            $sth = $this->db->prepare('INSERT INTO activity (title, started_at, finished_at, user_id) VALUES (?, ?, ?, ?)');
+            $sth = $this->db->prepare('INSERT INTO activity (title, started_at, finished_at, user_id) VALUES (?, ?, ?, ?) RETURNING id');
             $sth->execute([
                 $activityHash['title'],
                 $activityHash['started_at'],
                 $activityHash['finished_at'],
                 $this->users[$activityHash['user']]['id'],
             ]);
-            // TODO: tags
+            $activityId = $sth->fetchColumn();
+            $tags = array_map('trim', explode(',', $activityHash['tags']));
+            foreach ($tags as $tag) {
+                if (!isset($this->tags[$tag])) {
+                    $sth = $this->db->prepare('INSERT INTO tag (title) VALUES (?) RETURNING id');
+                    $sth->execute([$tag]);
+                    $this->tags[$tag] = $sth->fetchColumn();
+                }
+                $sth = $this->db->prepare('INSERT INTO activity_tag (activity_id, tag_id) VALUES (?, ?)');
+                $sth->execute([$activityId, $this->tags[$tag]]);
+            }
         }
     }
 }

@@ -110,6 +110,11 @@ $app->get('/activities', function(Request $request, Response $response) {
             }
             $row['tags'] = array_values($row['tags']);
         }
+
+        if (isset($queryParams['tag']) && !in_array($queryParams['tag'], $row['tags'])) {
+            continue;
+        }
+
         $row['started_at'] = (new DateTime($row['started_at']))->format(DateTime::ISO8601);
         if (isset($row['finished_at'])) {
             $row['finished_at'] = (new DateTime($row['finished_at']))->format(DateTime::ISO8601);

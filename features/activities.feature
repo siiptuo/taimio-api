@@ -56,3 +56,15 @@ Feature: Activities
         When I request "GET /activities?date=2016-05-08"
         Then I get "200" response
         And The response is an array that contains 0 items
+
+    Scenario: Filter activities by tag
+        Given I have token for user "mika"
+        When I request "GET /activities?tag=test"
+        Then I get "200" response
+        And The response is an array that contains 2 items
+
+    Scenario: Filter activities by non-existing tag
+        Given I have token for user "mika"
+        When I request "GET /activities?tag=something"
+        Then I get "200" response
+        And The response is an array that contains 0 items
