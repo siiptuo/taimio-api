@@ -57,6 +57,23 @@ Feature: Activities
         Then I get "200" response
         And The response is an array that contains 0 items
 
+    Scenario Outline: Invalid date format
+        Given I have token for user "mika"
+        When I request "GET /activities?date=<date>"
+        Then I get "400" response
+        And The response property "error" contains "invalid date format"
+
+        Examples:
+            | date       |
+            | 20160508   |
+            | 2016-5-8   |
+            | 08052016   |
+            | 8.5.2016   |
+            | 5/8/2016   |
+            | today      |
+            | now        |
+            | 2016-05-32 |
+
     Scenario Outline: Filter activities between dates
         Given I have token for user "mika"
         When I request "GET /activities?start_date=<start_date>&end_date=<end_date>"

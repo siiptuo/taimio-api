@@ -83,6 +83,11 @@ $jwtMiddleware = function ($request, $response, $next) use ($container) {
     return $next($request, $response);
 };
 
+function validateDate($date, $format = 'Y-m-d') {
+    $d = DateTime::createFromFormat($format, $date);
+    return $d && $d->format($format) === $date;
+}
+
 $app->get('/activities', function(Request $request, Response $response) {
     $queryParams = $request->getQueryParams();
 
@@ -90,9 +95,15 @@ $app->get('/activities', function(Request $request, Response $response) {
     $params = [$this->jwt->user_id];
 
     if (isset($queryParams['date'])) {
+        if (!validateDate($queryParams['date'])) {
+            return $response->withJson(['error' => 'invalid date format'], 400);
+        }
         $sql .= ' AND started_at::date = ?';
         $params[] = $queryParams['date'];
     } elseif (isset($queryParams['start_date']) && isset($queryParams['end_date'])) {
+        if (!validateDate($queryParams['start_date']) || !validateDate($queryParams['end_date'])) {
+            return $response->withJson(['error' => 'invalid date format'], 400);
+        }
         $sql .= ' AND started_at::date >= ? AND started_at::date <= ?';
         $params[] = $queryParams['start_date'];
         $params[] = $queryParams['end_date'];
