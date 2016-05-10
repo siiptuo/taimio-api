@@ -94,9 +94,18 @@ $app->get('/activities', function(Request $request, Response $response) {
     $sql = 'SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE user_id = ?';
     $params = [$this->jwt->user_id];
 
-    if (isset($queryParams['start_date']) && isset($queryParams['end_date'])) {
+    if (isset($queryParams['start_date']) || isset($queryParams['end_date'])) {
+        if (!isset($queryParams['end_date'])) {
+            return $response->withJson(['error' => 'end_date required'], 400);
+        }
+        if (!isset($queryParams['start_date'])) {
+            return $response->withJson(['error' => 'start_date required'], 400);
+        }
         if (!validateDate($queryParams['start_date']) || !validateDate($queryParams['end_date'])) {
             return $response->withJson(['error' => 'invalid date format'], 400);
+        }
+        if (new DateTime($queryParams['start_date']) > new DateTime($queryParams['end_date'])) {
+            return $response->withJson(['error' => 'end_date before start_date'], 400);
         }
         $sql .= ' AND started_at::date >= ? AND started_at::date <= ?';
         $params[] = $queryParams['start_date'];

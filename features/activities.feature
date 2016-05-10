@@ -74,6 +74,24 @@ Feature: Activities
             | now        |
             | 2016-05-32 |
 
+    Scenario: Missing end date
+        Given I have token for user "mika"
+        When I request "GET /activities?start_date=<date>"
+        Then I get "400" response
+        And The response property "error" contains "end_date required"
+
+    Scenario: Missing start date
+        Given I have token for user "mika"
+        When I request "GET /activities?end_date=<date>"
+        Then I get "400" response
+        And The response property "error" contains "start_date required"
+
+    Scenario: End before start date
+        Given I have token for user "mika"
+        When I request "GET /activities?start_date=2016-05-10&end_date=2016-05-09"
+        Then I get "400" response
+        And The response property "error" contains "end_date before start_date"
+
     Scenario: Filter activities by tag
         Given I have token for user "mika"
         When I request "GET /activities?tag=test"
