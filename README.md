@@ -42,6 +42,13 @@ For development you may want to generate some test data:
 
     $ composer run-script seed
 
+### Environment variables
+
+- `TAIMIO_DBNAME`
+- `TAIMIO_USERNAME`
+- `TAIMIO_PASSWORD`
+- `TAIMIO_SECRET`
+
 ## License
 
 MIT
