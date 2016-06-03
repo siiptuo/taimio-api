@@ -5,6 +5,7 @@ set -e
 export TAIMIO_DBNAME='taimio_test'
 export TAIMIO_USERNAME='tuomas'
 export TAIMIO_PASSWORD=''
+export TAIMIO_SECRET='just testing'
 
 echo ''
 echo '==============='

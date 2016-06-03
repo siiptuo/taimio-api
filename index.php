@@ -6,8 +6,6 @@ use \Firebase\JWT\JWT;
 
 require 'vendor/autoload.php';
 
-define('JWT_SECRET', 'Taimio secret');
-
 function getTags($pdo, $tagId) {
     $sth = $pdo->prepare('SELECT array_to_json(array_agg(tag2.title) || tag1.title) FROM tag tag1 LEFT JOIN related_tag ON related_tag.tag_id = tag1.id LEFT JOIN tag AS tag2 ON tag2.id = related_tag.related_tag_id WHERE tag1.id = ? GROUP BY tag1.id');
     $sth->execute([$tagId]);
@@ -52,7 +50,7 @@ $app->post('/login', function(Request $request, Response $response) {
     }
 
     $payload = ['user_id' => $user['id']];
-    $token = JWT::encode($payload, JWT_SECRET);
+    $token = JWT::encode($payload, getenv('TAIMIO_SECRET'));
 
     return $response->withJson(['token' => $token], 200);
 });
@@ -76,7 +74,7 @@ $jwtMiddleware = function ($request, $response, $next) use ($container) {
         return $response->withJson(['error' => 'invalid autorization header'], 401);
     }
     try {
-        $container['jwt'] = JWT::decode($token, JWT_SECRET, ['HS256']);
+        $container['jwt'] = JWT::decode($token, getenv('TAIMIO_SECRET'), ['HS256']);
     } catch (Exception $e) {
         return $response->withJson(['error' => $e->getMessage()], 401);
     }

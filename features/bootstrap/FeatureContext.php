@@ -138,9 +138,8 @@ class FeatureContext implements Context, SnippetAcceptingContext
      */
     public function iHaveTokenForUser($user)
     {
-        $secret = 'Taimio secret';
         $payload = ['user_id' => $this->users[$user]['id']];
-        $token = JWT::encode($payload, $secret);
+        $token = JWT::encode($payload, getenv('TAIMIO_SECRET'));
         $this->token = $token;
     }
 
