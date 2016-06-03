@@ -14,7 +14,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
     public function __construct()
     {
         $this->client = new GuzzleHttp\Client();
-        $this->db = new PDO('pgsql:dbname='.getenv('TIIMA_DBNAME'), getenv('TIIMA_USERNAME'), getenv('TIIMA_PASSWORD'), [
+        $this->db = new PDO('pgsql:dbname='.getenv('TAIMIO_DBNAME'), getenv('TAIMIO_USERNAME'), getenv('TAIMIO_PASSWORD'), [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_EMULATE_PREPARES => false,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -138,7 +138,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
      */
     public function iHaveTokenForUser($user)
     {
-        $secret = 'Tiima secret';
+        $secret = 'Taimio secret';
         $payload = ['user_id' => $this->users[$user]['id']];
         $token = JWT::encode($payload, $secret);
         $this->token = $token;

@@ -1,6 +1,6 @@
 {
-    "name": "siiptuo/tiima",
-    "description": "time tracking software",
+    "name": "siiptuo/taimio-api",
+    "description": "time tracking REST API",
     "license": "MIT",
     "authors": [
         {

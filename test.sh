@@ -2,9 +2,9 @@
 
 set -e
 
-export TIIMA_DBNAME='tiima_test'
-export TIIMA_USERNAME='tuomas'
-export TIIMA_PASSWORD=''
+export TAIMIO_DBNAME='taimio_test'
+export TAIMIO_USERNAME='tuomas'
+export TAIMIO_PASSWORD=''
 
 echo ''
 echo '==============='
@@ -12,8 +12,8 @@ echo 'Create database'
 echo '==============='
 echo ''
 
-dropdb --if-exists tiima_test
-createdb tiima_test
+dropdb --if-exists taimio_test
+createdb taimio_test
 
 vendor/bin/phinx migrate -e testing
 
@@ -39,5 +39,5 @@ echo 'Exit'
 echo '===='
 echo ''
 
-dropdb tiima_test
+dropdb taimio_test
 kill %1

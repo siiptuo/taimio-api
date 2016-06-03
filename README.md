@@ -1,8 +1,8 @@
-# Tiima
+# Taimio API
 
-[![Code Climate](https://codeclimate.com/github/siiptuo/tiima-api/badges/gpa.svg)](https://codeclimate.com/github/siiptuo/tiima-api)
+[![Code Climate](https://codeclimate.com/github/siiptuo/taimio-api/badges/gpa.svg)](https://codeclimate.com/github/siiptuo/taimio-api)
 
-Tiima is a time tracking software. This repository contains the backend REST
+Taimio is a time tracking software. This repository contains the backend REST
 API created using PHP and PostgreSQL.
 
 ## Running
@@ -21,11 +21,11 @@ correctly.
 
 Create a database if needed:
 
-    $ createdb tiima
+    $ createdb taimio
 
 If you have a dump/backup, simply import it using:
 
-    $ psql tiima < tiima.sql
+    $ psql taimio < taimio.sql
 
 Otherwise configure [Phinx](https://phinx.org/) migrations. It's recommended to
 simply copy `phinx.yml.sample` as `phinx.yml` and fill in your database

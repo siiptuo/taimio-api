@@ -9,7 +9,7 @@ environments:
     development:
         adapter: pgsql
         host: localhost
-        name: tiima
+        name: taimio
         user: ''
         pass: ''
         charset: utf8
@@ -17,7 +17,7 @@ environments:
     testing:
         adapter: pgsql
         host: localhost
-        name: tiima_test
+        name: taimio_test
         user: ''
         pass: ''
         charset: utf8

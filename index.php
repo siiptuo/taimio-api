@@ -6,7 +6,7 @@ use \Firebase\JWT\JWT;
 
 require 'vendor/autoload.php';
 
-define('JWT_SECRET', 'Tiima secret');
+define('JWT_SECRET', 'Taimio secret');
 
 function getTags($pdo, $tagId) {
     $sth = $pdo->prepare('SELECT array_to_json(array_agg(tag2.title) || tag1.title) FROM tag tag1 LEFT JOIN related_tag ON related_tag.tag_id = tag1.id LEFT JOIN tag AS tag2 ON tag2.id = related_tag.related_tag_id WHERE tag1.id = ? GROUP BY tag1.id');
@@ -21,7 +21,7 @@ $container = new Slim\Container([
 ]);
 
 $container['db'] = function () {
-    return new PDO('pgsql:dbname='.getenv('TIIMA_DBNAME'), getenv('TIIMA_USERNAME'), getenv('TIIMA_PASSWORD'), [
+    return new PDO('pgsql:dbname='.getenv('TAIMIO_DBNAME'), getenv('TAIMIO_USERNAME'), getenv('TAIMIO_PASSWORD'), [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_EMULATE_PREPARES => false,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -58,7 +58,7 @@ $app->post('/login', function(Request $request, Response $response) {
 });
 
 $corsMiddleware = function ($request, $response, $next) {
-    $response = $response->withHeader('Access-Control-Allow-Origin', 'http://tiima.dev')
+    $response = $response->withHeader('Access-Control-Allow-Origin', 'http://taimio.dev')
         ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         ->withHeader('Access-Control-Allow-Headers', 'Origin, Authorization, Accept, Content-Type')
         ->withHeader('Access-Control-Allow-Max-Age', 60 * 60 * 24);
