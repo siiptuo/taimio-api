@@ -131,9 +131,9 @@ $app->get('/activities', function(Request $request, Response $response) {
             continue;
         }
 
-        $row['started_at'] = (new DateTime($row['started_at']))->format(DateTime::ISO8601);
+        $row['started_at'] = (new DateTime($row['started_at']))->format(DateTime::ATOM);
         if (isset($row['finished_at'])) {
-            $row['finished_at'] = (new DateTime($row['finished_at']))->format(DateTime::ISO8601);
+            $row['finished_at'] = (new DateTime($row['finished_at']))->format(DateTime::ATOM);
         }
         $activities[] = $row;
     }
@@ -158,9 +158,9 @@ $app->get('/activities/{id}', function(Request $request, Response $response, arr
         }
         $row['tags'] = array_values($row['tags']);
     }
-    $row['started_at'] = (new DateTime($row['started_at']))->format(DateTime::ISO8601);
+    $row['started_at'] = (new DateTime($row['started_at']))->format(DateTime::ATOM);
     if (isset($row['finished_at'])) {
-        $row['finished_at'] = (new DateTime($row['finished_at']))->format(DateTime::ISO8601);
+        $row['finished_at'] = (new DateTime($row['finished_at']))->format(DateTime::ATOM);
     }
 
     return $response->withJson($row);
