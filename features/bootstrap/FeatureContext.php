@@ -74,6 +74,25 @@ class FeatureContext implements Context, SnippetAcceptingContext
     }
 
     /**
+     * @When I request :arg1 with body:
+     */
+    public function iRequestWithBody($arg1, PyStringNode $body)
+    {
+        list($method, $url) = explode(' ', $arg1, 2);
+        $headers = [
+            "Content-Type" => "application/json"
+        ];
+        if (isset($this->token)) {
+            $headers['Authorization'] = "Bearer $this->token";
+        }
+        $this->response = $this->client->request($method, "localhost:9000$url", [
+            'http_errors' => false,
+            'headers' => $headers,
+            'body' => $body,
+        ]);
+    }
+
+    /**
      * @Then I get :statusCode response
      */
     public function iGetResponse($statusCode)
@@ -124,11 +143,10 @@ class FeatureContext implements Context, SnippetAcceptingContext
         $title = trim(substr($activity, 0, $s));
         $tags = preg_split('/\s*#/', substr($activity, $s + 1));
 
-        $sth = $this->db->prepare('INSERT INTO activity (title, started_at, finished_at, user_id) VALUES (?, ?, ?, ?)');
+        $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?)');
         $sth->execute([
             $title,
-            (new DateTime())->format('Y-m-d H:i:s'),
-            (new DateTime())->format('Y-m-d H:i:s'),
+            "[{(new DateTime())->format('Y-m-d H:i:s')},{(new DateTime())->format('Y-m-d H:i:s')})",
             $this->users[$user]['id'],
         ]);
     }
@@ -178,11 +196,10 @@ class FeatureContext implements Context, SnippetAcceptingContext
     {
         foreach ($activityTable as $activityHash) {
             $this->thereIsAUserNamed($activityHash['user']);
-            $sth = $this->db->prepare('INSERT INTO activity (title, started_at, finished_at, user_id) VALUES (?, ?, ?, ?) RETURNING id');
+            $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?) RETURNING id');
             $sth->execute([
                 $activityHash['title'],
-                $activityHash['started_at'],
-                $activityHash['finished_at'],
+                "[{$activityHash['started_at']},{$activityHash['finished_at']})",
                 $this->users[$activityHash['user']]['id'],
             ]);
             $activityId = $sth->fetchColumn();
@@ -197,5 +214,15 @@ class FeatureContext implements Context, SnippetAcceptingContext
                 $sth->execute([$activityId, $this->tags[$tag]]);
             }
         }
+    }
+
+    /**
+     * @Then User user :user has activity :activity
+     */
+    public function userUserHasActivity($user, $activity)
+    {
+        $sth = $this->db->prepare('SELECT EXISTS(SELECT 1 FROM activity WHERE title = ? AND user_id = ?)');
+        $sth->execute([$activity, $this->users[$user]['id']]);
+        PHPUnit_Framework_Assert::assertTrue($sth->fetchColumn());
     }
 }

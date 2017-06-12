@@ -89,7 +89,7 @@ function validateDate($date, $format = 'Y-m-d') {
 $app->get('/activities', function(Request $request, Response $response) {
     $queryParams = $request->getQueryParams();
 
-    $sql = 'SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE user_id = ?';
+    $sql = 'SELECT activity.id, activity.title, lower(activity.period) AS started_at, upper(activity.period) AS finished_at, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE user_id = ?';
     $params = [$this->jwt->user_id];
 
     if (isset($queryParams['start_date']) || isset($queryParams['end_date'])) {
@@ -105,7 +105,7 @@ $app->get('/activities', function(Request $request, Response $response) {
         if (new DateTime($queryParams['start_date']) > new DateTime($queryParams['end_date'])) {
             return $response->withJson(['error' => 'end_date before start_date'], 400);
         }
-        $sql .= ' AND started_at::date >= ? AND started_at::date <= ?';
+        $sql .= ' AND lower(activity.period)::date >= ? AND upper(activity.period)::date <= ?';
         $params[] = $queryParams['start_date'];
         $params[] = $queryParams['end_date'];
     }
@@ -142,7 +142,7 @@ $app->get('/activities', function(Request $request, Response $response) {
 })->add($jwtMiddleware);
 
 $app->get('/activities/{id}', function(Request $request, Response $response, array $args) {
-    $sth = $this->db->prepare('SELECT activity.*, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE activity.id = ? AND activity.user_id = ? GROUP BY activity.id ORDER BY started_at DESC');
+    $sth = $this->db->prepare('SELECT activity.id, activity.title, lower(activity.period) AS started_at, upper(activity.period) AS finished_at, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE activity.id = ? AND activity.user_id = ? GROUP BY activity.id');
     $sth->execute([$args['id'], $this->jwt->user_id]);
     $row = $sth->fetch();
     if ($row === false) {
@@ -178,11 +178,10 @@ $app->post('/activities', function(Request $request, Response $response) {
         $activity['finished_at'] = $data['finished_at'];
         $activity['tags'] = $data['tags'];
 
-        $sth = $this->db->prepare('INSERT INTO activity (title, started_at, finished_at, user_id) VALUES (?, ?, ?, ?) RETURNING id');
+        $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?) RETURNING id');
         $sth->execute([
             $activity['title'],
-            $activity['started_at'],
-            $activity['finished_at'],
+            "[{$activity['started_at']},{$activity['finished_at']})",
             $this->jwt->user_id,
         ]);
         $activity['id'] = $sth->fetchColumn();
@@ -219,6 +218,11 @@ $app->post('/activities', function(Request $request, Response $response) {
     } catch (PDOException $e) {
         $this->db->rollBack();
 
+        // Detect overlapping activities.
+        if ($e->getCode() === '23P01') {
+            return $response->withJson(['error' => 'overlap'], 400);
+        }
+
         return $response->withJson(['error' => $e->getMessage()], 500);
     }
 })->add($jwtMiddleware);
@@ -236,11 +240,10 @@ $app->put('/activities/{id:\d+}', function(Request $request, Response $response,
     try {
         $this->db->beginTransaction();
 
-        $sth = $this->db->prepare('UPDATE activity SET title = ?, started_at = ?, finished_at = ? WHERE id = ? AND user_id = ?');
+        $sth = $this->db->prepare('UPDATE activity SET title = ?, period = ? WHERE id = ? AND user_id = ?');
         $sth->execute([
             $activity['title'],
-            $activity['started_at'],
-            $activity['finished_at'],
+            "[{$activity['started_at']},{$activity['finished_at']})",
             $activity['id'],
             $this->jwt->user_id,
         ]);
@@ -283,6 +286,11 @@ $app->put('/activities/{id:\d+}', function(Request $request, Response $response,
         return $response->withJson($activity);
     } catch (PDOException $e) {
         $this->db->rollBack();
+
+        // Detect overlapping activities.
+        if ($e->getCode() === '23P01') {
+            return $response->withJson(['error' => 'overlap'], 400);
+        }
 
         return $response->withJson(['error' => $e->getMessage()], 500);
     }

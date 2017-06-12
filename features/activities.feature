@@ -1,11 +1,11 @@
 Feature: Activities
     Background:
         Given there are activities:
-            | user   | started_at       | finished_at      | title           | tags          |
-            | mika   | 2016-05-09 10:00 | 2016-05-09 10:00 | hello world     | first, test   |
-            | mika   | 2016-05-09 12:00 | 2016-05-09 13:00 | second activity | second, hello |
-            | mika   | 2016-05-10 15:00 | 2016-05-10 16:00 | third activity  | test          |
-            | heikki | 2016-05-09 10:00 | 2016-05-09 10:00 | my activity     | hello         |
+            | user   | started_at           | finished_at          | title           | tags          |
+            | mika   | 2016-05-09T10:00:00Z | 2016-05-09T11:00:00Z | hello world     | first, test   |
+            | mika   | 2016-05-09T12:00:00Z | 2016-05-09T13:00:00Z | second activity | second, hello |
+            | mika   | 2016-05-10T15:00:00Z | 2016-05-10T16:00:00Z | third activity  | test          |
+            | heikki | 2016-05-09T10:00:00Z | 2016-05-09T10:00:00Z | my activity     | hello         |
 
     Scenario: Fail to list activities
         When I request "GET /activities"
@@ -103,3 +103,68 @@ Feature: Activities
         When I request "GET /activities?tag=something"
         Then I get "200" response
         And The response is an array that contains 0 items
+
+    Scenario: Add new activity
+        Given I have token for user "mika"
+        When I request "POST /activities" with body:
+            """
+            {
+                "title": "new activity",
+                "started_at": "2017-06-12T20:30:00Z",
+                "finished_at": "2017-06-12T21:00:00Z",
+                "tags": ["hello", "world"]
+            }
+            """
+        Then I get "200" response
+        And User user "mika" has activity "new activity"
+
+    Scenario: Overlapping activities
+        Given I have token for user "mika"
+        When I request "POST /activities" with body:
+            """
+            {
+                "title": "overlapping activity",
+                "started_at": "2016-05-09T10:30:00Z",
+                "finished_at": "2016-05-09T11:00:00Z",
+                "tags": ["hello", "world"]
+            }
+            """
+        Then I get "400" response
+        And The response property "error" contains "overlap"
+
+    Scenario: Multiple current activities
+        Given I have token for user "mika"
+        When I request "POST /activities" with body:
+            """
+            {
+                "title": "first activity",
+                "started_at": "2016-05-09T10:30:00Z",
+                "finished_at": null,
+                "tags": ["hello", "world"]
+            }
+            """
+        And I request "POST /activities" with body:
+            """
+            {
+                "title": "first activity",
+                "started_at": "2016-05-09T11:00:00Z",
+                "finished_at": null,
+                "tags": ["hello", "world"]
+            }
+            """
+        Then I get "400" response
+        And The response property "error" contains "overlap"
+
+    Scenario: Overlapping activities from other user
+        Given I have token for user "heikki"
+        When I request "POST /activities" with body:
+            """
+            {
+                "title": "unrelated activity",
+                "started_at": "2016-05-09T10:30:00Z",
+                "finished_at": "2016-05-09T11:00:00Z",
+                "tags": ["hello", "world"]
+            }
+            """
+        Then I get "200" response
+        And User user "heikki" has activity "unrelated activity"
