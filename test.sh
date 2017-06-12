@@ -24,7 +24,7 @@ echo 'Run web server'
 echo '=============='
 echo ''
 
-php -S localhost:9000 index.php &
+(cd public && php -S localhost:9000 index.php &)
 
 echo ''
 echo '========='
