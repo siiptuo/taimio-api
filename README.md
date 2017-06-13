@@ -1,5 +1,6 @@
 # Taimio API
 
+[![Build Status](https://travis-ci.org/siiptuo/taimio-api.svg?branch=master)](https://travis-ci.org/siiptuo/taimio-api)
 [![Code Climate](https://codeclimate.com/github/siiptuo/taimio-api/badges/gpa.svg)](https://codeclimate.com/github/siiptuo/taimio-api)
 
 Taimio is a time tracking software. This repository contains the backend REST

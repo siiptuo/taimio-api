@@ -2,10 +2,11 @@
 
 set -e
 
-export TAIMIO_DBNAME='taimio_test'
-export TAIMIO_USERNAME='tuomas'
-export TAIMIO_PASSWORD=''
-export TAIMIO_SECRET='just testing'
+export TAIMIO_SECRET=testing
+export PHINX_DBHOST=localhost
+export PHINX_DBNAME=$TAIMIO_DBNAME
+export PHINX_DBUSER=$TAIMIO_USERNAME
+export PHINX_DBPASS=$TAIMIO_PASSWORD
 
 echo ''
 echo '==============='
@@ -13,8 +14,8 @@ echo 'Create database'
 echo '==============='
 echo ''
 
-dropdb --if-exists taimio_test
-createdb taimio_test
+dropdb --if-exists $TAIMIO_DBNAME
+createdb $TAIMIO_DBNAME
 
 vendor/bin/phinx migrate -e testing
 
@@ -24,7 +25,10 @@ echo 'Run web server'
 echo '=============='
 echo ''
 
-(cd public && php -S localhost:9000 index.php &)
+cd public
+php -S localhost:9000 index.php &
+PHP_PID=$!
+cd ..
 
 echo ''
 echo '========='
@@ -40,5 +44,5 @@ echo 'Exit'
 echo '===='
 echo ''
 
-dropdb taimio_test
-kill %1
+dropdb $TAIMIO_DBNAME
+kill $PHP_PID
