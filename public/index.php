@@ -174,8 +174,8 @@ $app->post('/activities', function(Request $request, Response $response) {
 
         $activity = [];
         $activity['title'] = $data['title'];
-        $activity['started_at'] = $data['started_at'];
-        $activity['finished_at'] = $data['finished_at'];
+        $activity['started_at'] = (new DateTime($data['started_at']))->format(DateTime::ATOM);
+        $activity['finished_at'] = (new DateTime($data['finished_at']))->format(DateTime::ATOM);
         $activity['tags'] = $data['tags'];
 
         $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?) RETURNING id');
@@ -233,8 +233,8 @@ $app->put('/activities/{id:\d+}', function(Request $request, Response $response,
     $activity = [];
     $activity['id'] = intval($args['id']);
     $activity['title'] = $data['title'];
-    $activity['started_at'] = $data['started_at'];
-    $activity['finished_at'] = $data['finished_at'];
+    $activity['started_at'] = (new DateTime($data['started_at']))->format(DateTime::ATOM);
+    $activity['finished_at'] = (new DateTime($data['finished_at']))->format(DateTime::ATOM);
     $activity['tags'] = $data['tags'];
 
     try {
