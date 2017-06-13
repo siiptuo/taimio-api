@@ -174,13 +174,19 @@ $app->post('/activities', function(Request $request, Response $response) {
         $activity = [];
         $activity['title'] = $data['title'];
         $activity['started_at'] = (new DateTime($data['started_at']))->format(DateTime::ATOM);
-        $activity['finished_at'] = (new DateTime($data['finished_at']))->format(DateTime::ATOM);
+        if (!empty($activity['finished_at'])) {
+            $activity['finished_at'] = (new DateTime($data['finished_at']))->format(DateTime::ATOM);
+        } else {
+            $activity['finished_at'] = null;
+        }
         $activity['tags'] = $data['tags'];
 
         $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?) RETURNING id');
+        $startedAt = $activity['started_at'];
+        $finishedAt = $activity['finished_at'] ?? '';
         $sth->execute([
             $activity['title'],
-            "[{$activity['started_at']},{$activity['finished_at']})",
+            "[$startedAt,$finishedAt)",
             $this->jwt->user_id,
         ]);
         $activity['id'] = $sth->fetchColumn();
@@ -233,16 +239,22 @@ $app->put('/activities/{id:\d+}', function(Request $request, Response $response,
     $activity['id'] = intval($args['id']);
     $activity['title'] = $data['title'];
     $activity['started_at'] = (new DateTime($data['started_at']))->format(DateTime::ATOM);
-    $activity['finished_at'] = (new DateTime($data['finished_at']))->format(DateTime::ATOM);
+    if (!empty($activity['finished_at'])) {
+        $activity['finished_at'] = (new DateTime($data['finished_at']))->format(DateTime::ATOM);
+    } else {
+        $activity['finished_at'] = null;
+    }
     $activity['tags'] = $data['tags'];
 
     try {
         $this->db->beginTransaction();
 
         $sth = $this->db->prepare('UPDATE activity SET title = ?, period = ? WHERE id = ? AND user_id = ?');
+        $startedAt = $activity['started_at'];
+        $finishedAt = $activity['finished_at'] ?? '';
         $sth->execute([
             $activity['title'],
-            "[{$activity['started_at']},{$activity['finished_at']})",
+            "[$startedAt,$finishedAt)",
             $activity['id'],
             $this->jwt->user_id,
         ]);
