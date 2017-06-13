@@ -36,7 +36,7 @@ echo 'Run tests'
 echo '========='
 echo ''
 
-vendor/bin/behat
+vendor/bin/behat --colors
 
 echo ''
 echo '===='
