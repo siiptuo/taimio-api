@@ -174,7 +174,7 @@ $app->post('/activities', function(Request $request, Response $response) {
         $activity = [];
         $activity['title'] = $data['title'];
         $activity['started_at'] = (new DateTime($data['started_at']))->format(DateTime::ATOM);
-        if (!empty($activity['finished_at'])) {
+        if (!empty($data['finished_at'])) {
             $activity['finished_at'] = (new DateTime($data['finished_at']))->format(DateTime::ATOM);
         } else {
             $activity['finished_at'] = null;
@@ -239,7 +239,7 @@ $app->put('/activities/{id:\d+}', function(Request $request, Response $response,
     $activity['id'] = intval($args['id']);
     $activity['title'] = $data['title'];
     $activity['started_at'] = (new DateTime($data['started_at']))->format(DateTime::ATOM);
-    if (!empty($activity['finished_at'])) {
+    if (!empty($data['finished_at'])) {
         $activity['finished_at'] = (new DateTime($data['finished_at']))->format(DateTime::ATOM);
     } else {
         $activity['finished_at'] = null;
