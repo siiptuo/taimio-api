@@ -152,6 +152,19 @@ class FeatureContext implements Context, SnippetAcceptingContext
     }
 
     /**
+     * @Given User :user has started activity :activity at :startedAt
+     */
+    public function userHasStartedActivityAt($user, $activity, $startedAt)
+    {
+        $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?)');
+        $sth->execute([
+            $activity,
+            "[$startedAt,)",
+            $this->users[$user]['id'],
+        ]);
+    }
+
+    /**
      * @Given I have token for user :user
      */
     public function iHaveTokenForUser($user)

@@ -105,9 +105,8 @@ $app->get('/activities', function(Request $request, Response $response) {
         if (new DateTime($queryParams['start_date']) > new DateTime($queryParams['end_date'])) {
             return $response->withJson(['error' => 'end_date before start_date'], 400);
         }
-        $sql .= ' AND lower(activity.period)::date >= ? AND upper(activity.period)::date <= ?';
-        $params[] = $queryParams['start_date'];
-        $params[] = $queryParams['end_date'];
+        $sql .= ' AND activity.period && ?';
+        $params[] = "[{$queryParams['start_date']} 00:00,{$queryParams['end_date']} 24:00)";
     }
 
     $sql .= ' GROUP BY activity.id ORDER BY started_at DESC';

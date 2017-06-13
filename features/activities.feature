@@ -74,6 +74,13 @@ Feature: Activities
             | now        |
             | 2016-05-32 |
 
+    Scenario: Activities contain current activity
+        Given I have token for user "heikki"
+        And User "heikki" has started activity "current activity" at "2017-06-12 12:00"
+        When I request "GET /activities?start_date=2017-06-12&end_date=2017-06-12"
+        Then I get "200" response
+        And The response is an array that contains 1 item
+
     Scenario: Missing end date
         Given I have token for user "mika"
         When I request "GET /activities?start_date=<date>"
