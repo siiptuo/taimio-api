@@ -140,6 +140,31 @@ $app->get('/activities', function(Request $request, Response $response) {
     return $response->withJson($activities);
 })->add($jwtMiddleware);
 
+$app->get('/activities/current', function(Request $request, Response $response, array $args) {
+    $sth = $this->db->prepare('SELECT activity.id, activity.title, lower(activity.period) AS started_at, upper(activity.period) AS finished_at, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE upper_inf(activity.period) AND activity.user_id = ? GROUP BY activity.id');
+    $sth->execute([$this->jwt->user_id]);
+    $row = $sth->fetch();
+    if ($row === false) {
+        return $response->withJson(['error' => 'not found'], 404);
+    }
+    if ($row['tags'] === '[null]') {
+        $row['tags'] = [];
+    } else {
+        $tagIds = json_decode($row['tags']);
+        $row['tags'] = [];
+        foreach ($tagIds as $tagId) {
+            $row['tags'] = array_unique(array_merge($row['tags'], getTags($this->db, $tagId)));
+        }
+        $row['tags'] = array_values($row['tags']);
+    }
+    $row['started_at'] = (new DateTime($row['started_at']))->format(DateTime::ATOM);
+    if (isset($row['finished_at'])) {
+        $row['finished_at'] = (new DateTime($row['finished_at']))->format(DateTime::ATOM);
+    }
+
+    return $response->withJson($row);
+})->add($jwtMiddleware);
+
 $app->get('/activities/{id}', function(Request $request, Response $response, array $args) {
     $sth = $this->db->prepare('SELECT activity.id, activity.title, lower(activity.period) AS started_at, upper(activity.period) AS finished_at, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE activity.id = ? AND activity.user_id = ? GROUP BY activity.id');
     $sth->execute([$args['id'], $this->jwt->user_id]);

@@ -175,3 +175,15 @@ Feature: Activities
             """
         Then I get "200" response
         And User user "heikki" has activity "unrelated activity"
+
+    Scenario: User has no current activity
+        Given I have token for user "heikki"
+        When I request "GET /activities/current"
+        Then I get "404" response
+
+    Scenario: User has current activity
+        Given I have token for user "heikki"
+        And User "heikki" has started activity "current activity" at "2017-06-12 12:00"
+        When I request "GET /activities/current"
+        Then I get "200" response
+        And The response property "title" contains "current activity"
