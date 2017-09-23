@@ -10,7 +10,8 @@
     ],
     "require": {
         "slim/slim": "^3.1",
-        "firebase/php-jwt": "^3.0"
+        "firebase/php-jwt": "^3.0",
+        "fzaninotto/faker": "^1.7"
     },
     "require-dev": {
         "robmorgan/phinx": "^0.5.1",
@@ -21,6 +22,7 @@
     "scripts": {
         "migrate": "phinx migrate",
         "seed": [
+            "phinx seed:run -s UserSeeder",
             "phinx seed:run -s TagSeeder",
             "phinx seed:run -s ActivitySeeder"
         ],

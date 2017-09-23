@@ -18,31 +18,34 @@ class ActivitySeeder extends AbstractSeed
     public function run()
     {
         $words = require 'words.php';
+        $users = $this->fetchAll('SELECT * from "user"');
         $tags = $this->fetchAll('SELECT * FROM tag');
+
+        $activityId = 0;
         $activityData = [];
         $activityTagData = [];
 
-        for ($i = 0; $i < 100; $i++) {
-            if ($i == 99) {
-                $startedAt = date('Y-m-d H:i:s', time() - random_int(0, 60 * 60));
-                $finishedAt = null;
-            } else {
-                $s = time() - random_int(60 * 60, 60 * 60 * 24 * 7 * 4);
-                $startedAt = date('Y-m-d H:i:s', $s);
-                $finishedAt = date('Y-m-d H:i:s', $s + random_int(60, 60 * 60 * 4));
-            }
-            $activityData[] = [
-                'id' => $i,
-                'title' => implode(' ', $this->arrayGetRandom($words, random_int(1, 2))),
-                'started_at' => $startedAt,
-                'finished_at' => $finishedAt,
-            ];
-            $activityTagData = array_merge($activityTagData, array_map(function ($tag) use ($i) {
-                return [
-                    'activity_id' => $i,
-                    'tag_id' => $tag['id'],
+        foreach ($users as $user) {
+            $time = time();
+            for ($j = 0; $j < 100; $j++) {
+                $duration = random_int(60, 60 * 60 * 4);
+                $startedAt = date('Y-m-d H:i:s', $time - $duration);
+                $finishedAt = date('Y-m-d H:i:s', $time);
+                $activityData[] = [
+                    'id' => $activityId,
+                    'user_id' => $user['id'],
+                    'title' => implode(' ', $this->arrayGetRandom($words, random_int(1, 2))),
+                    'period' => "[$startedAt,$finishedAt)",
                 ];
-            }, $this->arrayGetRandom($tags, random_int(1, 3))));
+                $activityTagData = array_merge($activityTagData, array_map(function ($tag) use ($activityId) {
+                    return [
+                        'activity_id' => $activityId,
+                        'tag_id' => $tag['id'],
+                    ];
+                }, $this->arrayGetRandom($tags, random_int(1, 3))));
+                $time -= $duration + random_int(0, 60 * 60 * 24);
+                $activityId++;
+            }
         }
 
         $this->table('activity')->insert($activityData)->save();
