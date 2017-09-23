@@ -56,7 +56,7 @@ $app->post('/login', function(Request $request, Response $response) {
 });
 
 $corsMiddleware = function ($request, $response, $next) {
-    $response = $response->withHeader('Access-Control-Allow-Origin', 'http://taimio.dev')
+    $response = $response->withHeader('Access-Control-Allow-Origin', '*')
         ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         ->withHeader('Access-Control-Allow-Headers', 'Origin, Authorization, Accept, Content-Type')
         ->withHeader('Access-Control-Allow-Max-Age', 60 * 60 * 24);
