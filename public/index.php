@@ -71,7 +71,7 @@ $jwtMiddleware = function ($request, $response, $next) use ($container) {
     }
     list($type, $token) = explode(' ', $request->getHeaderLine('Authorization'));
     if (empty($type) || empty($token) || $type !== 'Bearer') {
-        return $response->withJson(['error' => 'invalid autorization header'], 401);
+        return $response->withJson(['error' => 'invalid authorization header'], 401);
     }
     try {
         $container['jwt'] = JWT::decode($token, getenv('TAIMIO_SECRET'), ['HS256']);
