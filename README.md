@@ -32,7 +32,7 @@ Otherwise configure [Phinx](https://phinx.org/) migrations. It's recommended to
 simply copy `phinx.yml.sample` as `phinx.yml` and fill in your database
 information.
 
-    $ cp phinx.sample.yaml phinx.yaml
+    $ cp phinx.sample.yml phinx.yml
     $ vi phinx.yml
 
 Then run migrations:
