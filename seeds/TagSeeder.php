@@ -11,7 +11,6 @@ class TagSeeder extends AbstractSeed
         shuffle($tagList);
         for ($i = 0; $i < 10; $i++) {
             $tagData[] = [
-                'id' => $i,
                 'title' => array_pop($tagList),
             ];
         }

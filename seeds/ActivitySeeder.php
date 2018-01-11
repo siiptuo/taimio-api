@@ -21,8 +21,6 @@ class ActivitySeeder extends AbstractSeed
         $users = $this->fetchAll('SELECT * from "user"');
         $tags = $this->fetchAll('SELECT * FROM tag');
 
-        $activityId = 0;
-        $activityData = [];
         $activityTagData = [];
 
         foreach ($users as $user) {
@@ -31,12 +29,13 @@ class ActivitySeeder extends AbstractSeed
                 $duration = random_int(60, 60 * 60 * 4);
                 $startedAt = date('Y-m-d H:i:s', $time - $duration);
                 $finishedAt = date('Y-m-d H:i:s', $time);
-                $activityData[] = [
-                    'id' => $activityId,
+                $activityData = [
                     'user_id' => $user['id'],
                     'title' => implode(' ', $this->arrayGetRandom($words, random_int(1, 2))),
                     'period' => "[$startedAt,$finishedAt)",
                 ];
+                $this->table('activity')->insert($activityData)->save();
+                $activityId = $this->getAdapter()->getConnection()->lastInsertId();
                 $activityTagData = array_merge($activityTagData, array_map(function ($tag) use ($activityId) {
                     return [
                         'activity_id' => $activityId,
@@ -44,11 +43,9 @@ class ActivitySeeder extends AbstractSeed
                     ];
                 }, $this->arrayGetRandom($tags, random_int(1, 3))));
                 $time -= $duration + random_int(0, 60 * 60 * 24);
-                $activityId++;
             }
         }
 
-        $this->table('activity')->insert($activityData)->save();
         $this->table('activity_tag')->insert($activityTagData)->save();
     }
 }
