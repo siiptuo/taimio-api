@@ -2,7 +2,6 @@
 
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
-use \Firebase\JWT\JWT;
 
 require '../vendor/autoload.php';
 
@@ -49,8 +48,13 @@ $app->post('/login', function(Request $request, Response $response) {
         return $response->withJson(['error' => 'wrong password'], 401);
     }
 
-    $payload = ['user_id' => $user['id']];
-    $token = JWT::encode($payload, getenv('TAIMIO_SECRET'));
+    $token = bin2hex(random_bytes(16));
+
+    $sth = $this->db->prepare('INSERT INTO token (token, user_id) VALUES (:token, :user_id)');
+    $sth->execute([
+        'token' => $token,
+        'user_id' => $user['id'],
+    ]);
 
     return $response->withJson(['token' => $token], 200);
 });
@@ -65,7 +69,7 @@ $corsMiddleware = function ($request, $response, $next) {
 
 $app->add($corsMiddleware);
 
-$jwtMiddleware = function ($request, $response, $next) use ($container) {
+$authMiddleware = function ($request, $response, $next) use ($container) {
     if (!$request->hasHeader('Authorization')) {
         return $response->withJson(['error' => 'no token'], 401);
     }
@@ -74,7 +78,9 @@ $jwtMiddleware = function ($request, $response, $next) use ($container) {
         return $response->withJson(['error' => 'invalid authorization header'], 401);
     }
     try {
-        $container['jwt'] = JWT::decode($token, getenv('TAIMIO_SECRET'), ['HS256']);
+        $sth = $this->db->prepare('SELECT user_id FROM token WHERE token = ?');
+        $sth->execute([$token]);
+        $container['userId'] = $sth->fetchColumn();
     } catch (Exception $e) {
         return $response->withJson(['error' => $e->getMessage()], 401);
     }
@@ -90,7 +96,7 @@ $app->get('/activities', function(Request $request, Response $response) {
     $queryParams = $request->getQueryParams();
 
     $sql = 'SELECT activity.id, activity.title, lower(activity.period) AS started_at, upper(activity.period) AS finished_at, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE user_id = ?';
-    $params = [$this->jwt->user_id];
+    $params = [$this->userId];
 
     if (isset($queryParams['start_date']) || isset($queryParams['end_date'])) {
         if (!isset($queryParams['end_date'])) {
@@ -138,11 +144,11 @@ $app->get('/activities', function(Request $request, Response $response) {
     }
 
     return $response->withJson($activities);
-})->add($jwtMiddleware);
+})->add($authMiddleware);
 
 $app->get('/activities/current', function(Request $request, Response $response, array $args) {
     $sth = $this->db->prepare('SELECT activity.id, activity.title, lower(activity.period) AS started_at, upper(activity.period) AS finished_at, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE upper_inf(activity.period) AND activity.user_id = ? GROUP BY activity.id');
-    $sth->execute([$this->jwt->user_id]);
+    $sth->execute([$this->userId]);
     $row = $sth->fetch();
     if ($row === false) {
         return $response->withJson(['error' => 'not found'], 404);
@@ -163,11 +169,11 @@ $app->get('/activities/current', function(Request $request, Response $response, 
     }
 
     return $response->withJson($row);
-})->add($jwtMiddleware);
+})->add($authMiddleware);
 
 $app->get('/activities/{id}', function(Request $request, Response $response, array $args) {
     $sth = $this->db->prepare('SELECT activity.id, activity.title, lower(activity.period) AS started_at, upper(activity.period) AS finished_at, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE activity.id = ? AND activity.user_id = ? GROUP BY activity.id');
-    $sth->execute([$args['id'], $this->jwt->user_id]);
+    $sth->execute([$args['id'], $this->userId]);
     $row = $sth->fetch();
     if ($row === false) {
         return $response->withJson(['error' => 'not found'], 404);
@@ -188,7 +194,7 @@ $app->get('/activities/{id}', function(Request $request, Response $response, arr
     }
 
     return $response->withJson($row);
-})->add($jwtMiddleware);
+})->add($authMiddleware);
 
 $app->post('/activities', function(Request $request, Response $response) {
     try {
@@ -212,7 +218,7 @@ $app->post('/activities', function(Request $request, Response $response) {
         $sth->execute([
             $activity['title'],
             "[$startedAt,$finishedAt)",
-            $this->jwt->user_id,
+            $this->userId,
         ]);
         $activity['id'] = $sth->fetchColumn();
 
@@ -255,7 +261,7 @@ $app->post('/activities', function(Request $request, Response $response) {
 
         return $response->withJson(['error' => $e->getMessage()], 500);
     }
-})->add($jwtMiddleware);
+})->add($authMiddleware);
 
 $app->put('/activities/{id:\d+}', function(Request $request, Response $response, array $args) {
     $data = $request->getParsedBody();
@@ -281,7 +287,7 @@ $app->put('/activities/{id:\d+}', function(Request $request, Response $response,
             $activity['title'],
             "[$startedAt,$finishedAt)",
             $activity['id'],
-            $this->jwt->user_id,
+            $this->userId,
         ]);
 
         if ($sth->rowCount() !== 1) {
@@ -330,7 +336,7 @@ $app->put('/activities/{id:\d+}', function(Request $request, Response $response,
 
         return $response->withJson(['error' => $e->getMessage()], 500);
     }
-})->add($jwtMiddleware);
+})->add($authMiddleware);
 
 $app->delete('/activities/{id:\d+}', function(Request $request, Response $response, array $args) {
     try {
@@ -339,7 +345,7 @@ $app->delete('/activities/{id:\d+}', function(Request $request, Response $respon
         $sth = $this->db->prepare('SELECT * FROM activity WHERE id = ? AND user_id = ?');
         $sth->execute([
             $args['id'],
-            $this->jwt->user_id,
+            $this->userId,
         ]);
         if ($sth->rowCount() !== 1) {
             return $response->withJson(['error' => 'activity not found'], 404);
@@ -359,6 +365,6 @@ $app->delete('/activities/{id:\d+}', function(Request $request, Response $respon
 
         return $response->withJson(['error' => $e->getMessage()], 500);
     }
-})->add($jwtMiddleware);
+})->add($authMiddleware);
 
 $app->run();
