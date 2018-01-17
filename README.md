@@ -37,11 +37,11 @@ information.
 
 Then run migrations:
 
-    $ composer run-script migrate
+    $ composer migrate
 
 For development you may want to generate some test data:
 
-    $ composer run-script seed
+    $ composer seed
 
 ### Environment variables
 
