@@ -25,6 +25,6 @@
             "phinx seed:run -s TagSeeder",
             "phinx seed:run -s ActivitySeeder"
         ],
-        "test": "sh test.sh"
+        "test": "./run-tests"
     }
 }
