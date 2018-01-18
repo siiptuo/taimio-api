@@ -7,8 +7,6 @@ use Behat\Gherkin\Node\PyStringNode;
 use Behat\Gherkin\Node\TableNode;
 use Behat\Behat\Hook\Scope\AfterScenarioScope;
 
-use \Firebase\JWT\JWT;
-
 class FeatureContext implements Context, SnippetAcceptingContext
 {
     public function __construct()
@@ -169,8 +167,12 @@ class FeatureContext implements Context, SnippetAcceptingContext
      */
     public function iHaveTokenForUser($user)
     {
-        $payload = ['user_id' => $this->users[$user]['id']];
-        $token = JWT::encode($payload, getenv('TAIMIO_SECRET'));
+        $userId = $this->users[$user]['id'];
+        $token = bin2hex(random_bytes(16));
+
+        $sth = $this->db->prepare('INSERT INTO token (token, user_id) VALUES (?, ?)');
+        $sth->execute([$token, $userId]);
+
         $this->token = $token;
     }
 
