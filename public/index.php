@@ -5,12 +5,6 @@ use Psr\Http\Message\ResponseInterface as Response;
 
 require '../vendor/autoload.php';
 
-function getTags($pdo, $tagId) {
-    $sth = $pdo->prepare('SELECT array_to_json(array_agg(tag2.title) || tag1.title) FROM tag tag1 LEFT JOIN related_tag ON related_tag.tag_id = tag1.id LEFT JOIN tag AS tag2 ON tag2.id = related_tag.related_tag_id WHERE tag1.id = ? GROUP BY tag1.id');
-    $sth->execute([$tagId]);
-    return array_filter(json_decode($sth->fetchColumn()));
-}
-
 $container = new Slim\Container([
     'settings' => [
         'displayErrorDetails' => true,
@@ -95,7 +89,15 @@ function validateDate($date, $format = 'Y-m-d') {
 $app->get('/activities', function(Request $request, Response $response) {
     $queryParams = $request->getQueryParams();
 
-    $sql = 'SELECT activity.id, activity.title, lower(activity.period) AS started_at, upper(activity.period) AS finished_at, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE user_id = ?';
+    $sql = 'SELECT activity.id,
+                   activity.title,
+                   lower(activity.period) AS started_at,
+                   upper(activity.period) AS finished_at,
+                   COALESCE(json_agg(tag.title) FILTER (WHERE tag IS NOT NULL), \'[]\') AS tags
+            FROM activity
+            LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id
+            LEFT JOIN tag ON tag.id = activity_tag.tag_id
+            WHERE user_id = ?';
     $params = [$this->userId];
 
     if (isset($queryParams['start_date']) || isset($queryParams['end_date'])) {
@@ -121,16 +123,7 @@ $app->get('/activities', function(Request $request, Response $response) {
     $sth = $this->db->prepare($sql);
     $sth->execute($params);
     foreach ($sth->fetchAll() as $row) {
-        if ($row['tags'] === '[null]') {
-            $row['tags'] = [];
-        } else {
-            $tagIds = json_decode($row['tags']);
-            $row['tags'] = [];
-            foreach ($tagIds as $tagId) {
-                $row['tags'] = array_unique(array_merge($row['tags'], getTags($this->db, $tagId)));
-            }
-            $row['tags'] = array_values($row['tags']);
-        }
+        $row['tags'] = json_decode($row['tags']);
 
         if (isset($queryParams['tag']) && !in_array($queryParams['tag'], $row['tags'])) {
             continue;
@@ -147,22 +140,22 @@ $app->get('/activities', function(Request $request, Response $response) {
 })->add($authMiddleware);
 
 $app->get('/activities/current', function(Request $request, Response $response, array $args) {
-    $sth = $this->db->prepare('SELECT activity.id, activity.title, lower(activity.period) AS started_at, upper(activity.period) AS finished_at, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE upper_inf(activity.period) AND activity.user_id = ? GROUP BY activity.id');
+    $sth = $this->db->prepare('SELECT activity.id,
+                                      activity.title,
+                                      lower(activity.period) AS started_at,
+                                      upper(activity.period) AS finished_at,
+                                      COALESCE(json_agg(tag.title) FILTER (WHERE tag IS NOT NULL), \'[]\') AS tags
+                               FROM activity
+                               LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id
+                               LEFT JOIN tag ON tag.id = activity_tag.tag_id
+                               WHERE upper_inf(activity.period) AND activity.user_id = ?
+                               GROUP BY activity.id');
     $sth->execute([$this->userId]);
     $row = $sth->fetch();
     if ($row === false) {
         return $response->withJson(['error' => 'not found'], 404);
     }
-    if ($row['tags'] === '[null]') {
-        $row['tags'] = [];
-    } else {
-        $tagIds = json_decode($row['tags']);
-        $row['tags'] = [];
-        foreach ($tagIds as $tagId) {
-            $row['tags'] = array_unique(array_merge($row['tags'], getTags($this->db, $tagId)));
-        }
-        $row['tags'] = array_values($row['tags']);
-    }
+    $row['tags'] = json_decode($row['tags']);
     $row['started_at'] = (new DateTime($row['started_at']))->format(DateTime::ATOM);
     if (isset($row['finished_at'])) {
         $row['finished_at'] = (new DateTime($row['finished_at']))->format(DateTime::ATOM);
@@ -172,22 +165,22 @@ $app->get('/activities/current', function(Request $request, Response $response, 
 })->add($authMiddleware);
 
 $app->get('/activities/{id}', function(Request $request, Response $response, array $args) {
-    $sth = $this->db->prepare('SELECT activity.id, activity.title, lower(activity.period) AS started_at, upper(activity.period) AS finished_at, json_agg(activity_tag.tag_id) AS tags FROM activity LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id WHERE activity.id = ? AND activity.user_id = ? GROUP BY activity.id');
+    $sth = $this->db->prepare('SELECT activity.id,
+                                        activity.title,
+                                        lower(activity.period) AS started_at,
+                                        upper(activity.period) AS finished_at,
+                                        COALESCE(json_agg(tag.title) FILTER (WHERE tag IS NOT NULL), \'[]\') AS tags
+                               FROM activity
+                               LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id
+                               LEFT JOIN tag ON tag.id = activity_tag.tag_id
+                               WHERE activity.id = ? AND activity.user_id = ?
+                               GROUP BY activity.id');
     $sth->execute([$args['id'], $this->userId]);
     $row = $sth->fetch();
     if ($row === false) {
         return $response->withJson(['error' => 'not found'], 404);
     }
-    if ($row['tags'] === '[null]') {
-        $row['tags'] = [];
-    } else {
-        $tagIds = json_decode($row['tags']);
-        $row['tags'] = [];
-        foreach ($tagIds as $tagId) {
-            $row['tags'] = array_unique(array_merge($row['tags'], getTags($this->db, $tagId)));
-        }
-        $row['tags'] = array_values($row['tags']);
-    }
+    $row['tags'] = json_decode($row['tags']);
     $row['started_at'] = (new DateTime($row['started_at']))->format(DateTime::ATOM);
     if (isset($row['finished_at'])) {
         $row['finished_at'] = (new DateTime($row['finished_at']))->format(DateTime::ATOM);
