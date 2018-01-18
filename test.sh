@@ -2,6 +2,12 @@
 
 set -e
 
+function finish {
+    dropdb --if-exists $TAIMIO_DBNAME
+    [ $PHP_PID ] && kill $PHP_PID
+}
+trap finish EXIT
+
 export TAIMIO_SECRET=testing
 export PHINX_DBHOST=localhost
 export PHINX_DBNAME=$TAIMIO_DBNAME
@@ -37,12 +43,3 @@ echo '========='
 echo ''
 
 vendor/bin/behat --colors
-
-echo ''
-echo '===='
-echo 'Exit'
-echo '===='
-echo ''
-
-dropdb $TAIMIO_DBNAME
-kill $PHP_PID
