@@ -74,6 +74,9 @@ $authMiddleware = function ($request, $response, $next) use ($container) {
     try {
         $sth = $this->db->prepare('SELECT user_id FROM token WHERE token = ?');
         $sth->execute([$token]);
+        if ($sth->rowCount() !== 1) {
+            throw new Exception("invalid token");
+        }
         $container['userId'] = $sth->fetchColumn();
     } catch (Exception $e) {
         return $response->withJson(['error' => $e->getMessage()], 401);

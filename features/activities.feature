@@ -7,9 +7,15 @@ Feature: Activities
             | mika   | 2016-05-10T15:00:00Z | 2016-05-10T16:00:00Z | third activity  | test          |
             | heikki | 2016-05-09T10:00:00Z | 2016-05-09T10:00:00Z | my activity     | hello         |
 
-    Scenario: Fail to list activities
+    Scenario: Fail to list activities without token
         When I request "GET /activities"
         Then I get "401" response
+
+    Scenario: Fail to list activities with invalid token
+        Given I have token "invalid"
+        When I request "GET /activities"
+        Then I get "401" response
+        And The response property "error" contains "invalid token"
 
     Scenario: List all activities
         Given I have token for user "mika"

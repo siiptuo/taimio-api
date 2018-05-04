@@ -163,6 +163,14 @@ class FeatureContext implements Context, SnippetAcceptingContext
     }
 
     /**
+     * @Given I have token :token
+     */
+    public function iHaveToken($token)
+    {
+        $this->token = $token;
+    }
+
+    /**
      * @Given I have token for user :user
      */
     public function iHaveTokenForUser($user)
