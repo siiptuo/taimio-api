@@ -49,6 +49,7 @@ For development you may want to generate some test data:
 - `TAIMIO_USERNAME`
 - `TAIMIO_PASSWORD`
 - `TAIMIO_SECRET`
+- `TAIMIO_ALLOW_ORIGIN`
 
 ## License
 
