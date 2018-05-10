@@ -21,7 +21,7 @@ $container['db'] = function () {
 
 $app = new Slim\App($container);
 
-$app->post('/login', function(Request $request, Response $response) {
+$app->post('/login', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
     if (empty($data['username'])) {
         return $response->withJson(['error' => 'username required'], 400);
@@ -84,12 +84,13 @@ $authMiddleware = function ($request, $response, $next) use ($container) {
     return $next($request, $response);
 };
 
-function validateDate($date, $format = 'Y-m-d') {
+function validateDate($date, $format = 'Y-m-d')
+{
     $d = DateTime::createFromFormat($format, $date);
     return $d && $d->format($format) === $date;
 }
 
-$app->get('/activities', function(Request $request, Response $response) {
+$app->get('/activities', function (Request $request, Response $response) {
     $queryParams = $request->getQueryParams();
 
     $sql = 'SELECT activity.id,
@@ -142,7 +143,7 @@ $app->get('/activities', function(Request $request, Response $response) {
     return $response->withJson($activities);
 })->add($authMiddleware);
 
-$app->get('/activities/current', function(Request $request, Response $response, array $args) {
+$app->get('/activities/current', function (Request $request, Response $response, array $args) {
     $sth = $this->db->prepare('SELECT activity.id,
                                       activity.title,
                                       lower(activity.period) AS started_at,
@@ -167,7 +168,7 @@ $app->get('/activities/current', function(Request $request, Response $response, 
     return $response->withJson($row);
 })->add($authMiddleware);
 
-$app->get('/activities/{id}', function(Request $request, Response $response, array $args) {
+$app->get('/activities/{id}', function (Request $request, Response $response, array $args) {
     $sth = $this->db->prepare('SELECT activity.id,
                                         activity.title,
                                         lower(activity.period) AS started_at,
@@ -192,7 +193,7 @@ $app->get('/activities/{id}', function(Request $request, Response $response, arr
     return $response->withJson($row);
 })->add($authMiddleware);
 
-$app->post('/activities', function(Request $request, Response $response) {
+$app->post('/activities', function (Request $request, Response $response) {
     try {
         $this->db->beginTransaction();
 
@@ -259,7 +260,7 @@ $app->post('/activities', function(Request $request, Response $response) {
     }
 })->add($authMiddleware);
 
-$app->put('/activities/{id:\d+}', function(Request $request, Response $response, array $args) {
+$app->put('/activities/{id:\d+}', function (Request $request, Response $response, array $args) {
     $data = $request->getParsedBody();
 
     $activity = [];
@@ -334,7 +335,7 @@ $app->put('/activities/{id:\d+}', function(Request $request, Response $response,
     }
 })->add($authMiddleware);
 
-$app->delete('/activities/{id:\d+}', function(Request $request, Response $response, array $args) {
+$app->delete('/activities/{id:\d+}', function (Request $request, Response $response, array $args) {
     try {
         $this->db->beginTransaction();
 
