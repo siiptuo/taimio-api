@@ -46,7 +46,7 @@ $app->post('/login', function(Request $request, Response $response) {
 
     $sth = $this->db->prepare('INSERT INTO token (token, user_id) VALUES (:token, :user_id)');
     $sth->execute([
-        'token' => $token,
+        'token' => hash('sha256', $token),
         'user_id' => $user['id'],
     ]);
 
@@ -73,7 +73,7 @@ $authMiddleware = function ($request, $response, $next) use ($container) {
     }
     try {
         $sth = $this->db->prepare('SELECT user_id FROM token WHERE token = ?');
-        $sth->execute([$token]);
+        $sth->execute([hash('sha256', $token)]);
         if ($sth->rowCount() !== 1) {
             throw new Exception("invalid token");
         }

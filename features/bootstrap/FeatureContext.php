@@ -179,7 +179,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
         $token = bin2hex(random_bytes(16));
 
         $sth = $this->db->prepare('INSERT INTO token (token, user_id) VALUES (?, ?)');
-        $sth->execute([$token, $userId]);
+        $sth->execute([hash('sha256', $token), $userId]);
 
         $this->token = $token;
     }
