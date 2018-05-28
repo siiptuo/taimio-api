@@ -222,11 +222,11 @@ $app->post('/activities', function (Request $request, Response $response) {
         if (count($activity['tags']) > 0) {
             $tags = [];
             foreach ($activity['tags'] as $tag) {
-                $sth = $this->db->prepare('INSERT INTO tag (title) VALUES (?) ON CONFLICT DO NOTHING RETURNING id');
+                $sth = $this->db->prepare('SELECT id FROM tag WHERE LOWER(title) = LOWER(?)');
                 $sth->execute([$tag]);
                 $id = $sth->fetchColumn();
                 if ($id === false) {
-                    $sth = $this->db->prepare('SELECT id FROM tag WHERE LOWER(title) = LOWER(?)');
+                    $sth = $this->db->prepare('INSERT INTO tag (title) VALUES (?) RETURNING id');
                     $sth->execute([$tag]);
                     $id = $sth->fetchColumn();
                 }
@@ -237,7 +237,7 @@ $app->post('/activities', function (Request $request, Response $response) {
             }
 
             $placeholders = substr(str_repeat('(?, ?), ', count($tags)), 0, -2);
-            $sth = $this->db->prepare("INSERT INTO activity_tag (activity_id, tag_id) VALUES $placeholders ON CONFLICT DO NOTHING");
+            $sth = $this->db->prepare("INSERT INTO activity_tag (activity_id, tag_id) VALUES $placeholders");
             $params = [];
             foreach ($tags as $tag) {
                 array_push($params, $activity['id'], $tag['id']);
@@ -297,11 +297,11 @@ $app->put('/activities/{id:\d+}', function (Request $request, Response $response
         if (count($activity['tags']) > 0) {
             $tags = [];
             foreach ($activity['tags'] as $tag) {
-                $sth = $this->db->prepare('INSERT INTO tag (title) VALUES (?) ON CONFLICT DO NOTHING RETURNING id');
+                $sth = $this->db->prepare('SELECT id FROM tag WHERE LOWER(title) = LOWER(?)');
                 $sth->execute([$tag]);
                 $id = $sth->fetchColumn();
                 if ($id === false) {
-                    $sth = $this->db->prepare('SELECT id FROM tag WHERE LOWER(title) = LOWER(?)');
+                    $sth = $this->db->prepare('INSERT INTO tag (title) VALUES (?) RETURNING id');
                     $sth->execute([$tag]);
                     $id = $sth->fetchColumn();
                 }
