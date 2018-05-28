@@ -211,7 +211,7 @@ $app->post('/activities', function (Request $request, Response $response) {
 
         $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?) RETURNING id');
         $startedAt = $activity['started_at'];
-        $finishedAt = $activity['finished_at'] ?? '';
+        $finishedAt = !empty($activity['finished_at']) ? $activity['finished_at'] : '';
         $sth->execute([
             $activity['title'],
             "[$startedAt,$finishedAt)",
@@ -279,7 +279,7 @@ $app->put('/activities/{id:\d+}', function (Request $request, Response $response
 
         $sth = $this->db->prepare('UPDATE activity SET title = ?, period = ? WHERE id = ? AND user_id = ?');
         $startedAt = $activity['started_at'];
-        $finishedAt = $activity['finished_at'] ?? '';
+        $finishedAt = !empty($activity['finished_at']) ? $activity['finished_at'] : '';
         $sth->execute([
             $activity['title'],
             "[$startedAt,$finishedAt)",
