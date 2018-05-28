@@ -7,8 +7,13 @@ class AddTagTable extends AbstractMigration
     public function up()
     {
         $tag = $this->table('tag');
-        $tag->addColumn('title', 'text')->save();
-        $this->execute('CREATE UNIQUE INDEX ON tag ((lower(title)))');
+        $tag->addColumn('title', 'text')
+            ->addIndex(['LOWER(title)'], [
+                'unique' => true,
+                'name' => 'title_idx',
+            ])
+            ->save();
+
         $activityTag = $this->table('activity_tag', [
             'id' => false,
             'primary_key' => ['activity_id', 'tag_id']

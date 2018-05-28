@@ -95,7 +95,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
      */
     public function iGetResponse($statusCode)
     {
-        PHPUnit\Framework\Assert::assertEquals($statusCode, $this->response->getStatusCode());
+        PHPUnit_Framework_Assert::assertEquals($statusCode, $this->response->getStatusCode());
     }
 
     /**
@@ -190,8 +190,8 @@ class FeatureContext implements Context, SnippetAcceptingContext
     public function theResponseIsAnArrayThatContainsItems($count)
     {
         $data = json_decode($this->response->getBody(), true);
-        PHPUnit\Framework\Assert::assertInternalType('array', $data);
-        PHPUnit\Framework\Assert::assertCount(intval($count), $data);
+        PHPUnit_Framework_Assert::assertInternalType('array', $data);
+        PHPUnit_Framework_Assert::assertCount(intval($count), $data);
     }
 
     /**
@@ -200,7 +200,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
     public function theResponseContainsProperty($arg1)
     {
         $data = json_decode($this->response->getBody(), true);
-        PHPUnit\Framework\Assert::assertArrayHasKey($arg1, $data);
+        PHPUnit_Framework_Assert::assertArrayHasKey($arg1, $data);
     }
 
     /**
@@ -209,7 +209,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
     public function theResponsePropertyContains($property, $value)
     {
         $data = json_decode($this->response->getBody(), true);
-        PHPUnit\Framework\Assert::assertEquals($value, $data[$property]);
+        PHPUnit_Framework_Assert::assertEquals($value, $data[$property]);
     }
 
     /**
@@ -246,6 +246,6 @@ class FeatureContext implements Context, SnippetAcceptingContext
     {
         $sth = $this->db->prepare('SELECT EXISTS(SELECT 1 FROM activity WHERE title = ? AND user_id = ?)');
         $sth->execute([$activity, $this->users[$user]['id']]);
-        PHPUnit\Framework\Assert::assertTrue($sth->fetchColumn());
+        PHPUnit_Framework_Assert::assertTrue($sth->fetchColumn());
     }
 }

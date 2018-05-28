@@ -1,6 +1,6 @@
 paths:
-    migrations: '%%PHINX_CONFIG_DIR%%/migrations'
-    seeds: '%%PHINX_CONFIG_DIR%%/seeds'
+    migrations: %%PHINX_CONFIG_DIR%%/migrations
+    seeds: %%PHINX_CONFIG_DIR%%/seeds
 
 environments:
     default_migration_table: phinxlog
@@ -8,8 +8,8 @@ environments:
 
     testing:
         adapter: pgsql
-        host: '%%PHINX_DBHOST%%'
-        name: '%%PHINX_DBNAME%%'
-        user: '%%PHINX_DBUSER%%'
-        pass: '%%PHINX_DBPASS%%'
+        host: %%PHINX_DBHOST%%
+        name: %%PHINX_DBNAME%%
+        user: %%PHINX_DBUSER%%
+        pass: %%PHINX_DBPASS%%
         charset: utf8
