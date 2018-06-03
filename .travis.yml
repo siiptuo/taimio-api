@@ -13,5 +13,7 @@ env:
     - TAIMIO_DBNAME=taimio
     - TAIMIO_USERNAME=postgres
 install: composer install
-before_script: cp phinx.yml.travis phinx.yml
+before_script:
+  - cp phinx.yml.travis phinx.yml
+  - cp config.php.travis config.php
 script: composer test

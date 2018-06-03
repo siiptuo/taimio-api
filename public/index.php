@@ -4,6 +4,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 
 require '../vendor/autoload.php';
+require '../config.php';
 
 $container = new Slim\Container([
     'settings' => [
@@ -12,7 +13,7 @@ $container = new Slim\Container([
 ]);
 
 $container['db'] = function () {
-    return new PDO('pgsql:dbname='.getenv('TAIMIO_DBNAME'), getenv('TAIMIO_USERNAME'), getenv('TAIMIO_PASSWORD'), [
+    return new PDO('pgsql:dbname='.DB_NAME.';host='.DB_HOST, DB_USER, DB_PASS, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_EMULATE_PREPARES => false,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -52,16 +53,6 @@ $app->post('/login', function (Request $request, Response $response) {
 
     return $response->withJson(['token' => $token], 200);
 });
-
-$corsMiddleware = function ($request, $response, $next) {
-    $response = $response->withHeader('Access-Control-Allow-Origin', getenv('TAIMIO_ALLOW_ORIGIN'))
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        ->withHeader('Access-Control-Allow-Headers', 'Origin, Authorization, Accept, Content-Type')
-        ->withHeader('Access-Control-Allow-Max-Age', 60 * 60 * 24);
-    return $next($request, $response);
-};
-
-$app->add($corsMiddleware);
 
 $authMiddleware = function ($request, $response, $next) use ($container) {
     if (!$request->hasHeader('Authorization')) {
