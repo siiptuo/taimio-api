@@ -8,12 +8,6 @@ dist: trusty
 services: postgresql
 addons:
   postgresql: 9.4
-env:
-  global:
-    - TAIMIO_DBNAME=taimio
-    - TAIMIO_USERNAME=postgres
 install: composer install
-before_script:
-  - cp phinx.yml.travis phinx.yml
-  - cp config.php.travis config.php
+before_script: cp config.php.travis config.php
 script: composer test

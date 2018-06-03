@@ -3,3 +3,4 @@ define('DB_NAME', 'taimio');
 define('DB_USER', 'postgres');
 define('DB_PASS', '');
 define('DB_HOST', 'localhost');
+define('DB_PREFIX', '');

@@ -31,7 +31,7 @@ $app->post('/login', function (Request $request, Response $response) {
         return $response->withJson(['error' => 'password required'], 400);
     }
 
-    $sth = $this->db->prepare('SELECT * FROM "user" WHERE username = ?');
+    $sth = $this->db->prepare('SELECT * FROM "'.DB_PREFIX.'user" WHERE username = ?');
     $sth->execute([$data['username']]);
     $user = $sth->fetch();
 
@@ -45,7 +45,7 @@ $app->post('/login', function (Request $request, Response $response) {
 
     $token = bin2hex(random_bytes(16));
 
-    $sth = $this->db->prepare('INSERT INTO token (token, user_id) VALUES (:token, :user_id)');
+    $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'token (token, user_id) VALUES (:token, :user_id)');
     $sth->execute([
         'token' => hash('sha256', $token),
         'user_id' => $user['id'],
@@ -63,7 +63,7 @@ $authMiddleware = function ($request, $response, $next) use ($container) {
         return $response->withJson(['error' => 'invalid authorization header'], 401);
     }
     try {
-        $sth = $this->db->prepare('SELECT user_id FROM token WHERE token = ?');
+        $sth = $this->db->prepare('SELECT user_id FROM '.DB_PREFIX.'token WHERE token = ?');
         $sth->execute([hash('sha256', $token)]);
         if ($sth->rowCount() !== 1) {
             throw new Exception("invalid token");
@@ -89,9 +89,9 @@ $app->get('/activities', function (Request $request, Response $response) {
                    lower(activity.period) AS started_at,
                    upper(activity.period) AS finished_at,
                    COALESCE(json_agg(tag.title) FILTER (WHERE tag IS NOT NULL), \'[]\') AS tags
-            FROM activity
-            LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id
-            LEFT JOIN tag ON tag.id = activity_tag.tag_id
+            FROM '.DB_PREFIX.'activity AS activity
+            LEFT JOIN '.DB_PREFIX.'activity_tag AS activity_tag ON activity_tag.activity_id = activity.id
+            LEFT JOIN '.DB_PREFIX.'tag AS tag ON tag.id = activity_tag.tag_id
             WHERE user_id = ?';
     $params = [$this->userId];
 
@@ -140,9 +140,9 @@ $app->get('/activities/current', function (Request $request, Response $response,
                                       lower(activity.period) AS started_at,
                                       upper(activity.period) AS finished_at,
                                       COALESCE(json_agg(tag.title) FILTER (WHERE tag IS NOT NULL), \'[]\') AS tags
-                               FROM activity
-                               LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id
-                               LEFT JOIN tag ON tag.id = activity_tag.tag_id
+                               FROM '.DB_PREFIX.'activity AS activity
+                               LEFT JOIN '.DB_PREFIX.'activity_tag AS activity_tag ON activity_tag.activity_id = activity.id
+                               LEFT JOIN '.DB_PREFIX.'tag AS tag ON tag.id = activity_tag.tag_id
                                WHERE upper_inf(activity.period) AND activity.user_id = ?
                                GROUP BY activity.id');
     $sth->execute([$this->userId]);
@@ -165,9 +165,9 @@ $app->get('/activities/{id}', function (Request $request, Response $response, ar
                                         lower(activity.period) AS started_at,
                                         upper(activity.period) AS finished_at,
                                         COALESCE(json_agg(tag.title) FILTER (WHERE tag IS NOT NULL), \'[]\') AS tags
-                               FROM activity
-                               LEFT JOIN activity_tag ON activity_tag.activity_id = activity.id
-                               LEFT JOIN tag ON tag.id = activity_tag.tag_id
+                               FROM '.DB_PREFIX.'activity AS activity
+                               LEFT JOIN '.DB_PREFIX.'activity_tag AS activity_tag ON activity_tag.activity_id = activity.id
+                               LEFT JOIN '.DB_PREFIX.'tag AS tag ON tag.id = activity_tag.tag_id
                                WHERE activity.id = ? AND activity.user_id = ?
                                GROUP BY activity.id');
     $sth->execute([$args['id'], $this->userId]);
@@ -200,7 +200,7 @@ $app->post('/activities', function (Request $request, Response $response) {
         }
         $activity['tags'] = $data['tags'];
 
-        $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?) RETURNING id');
+        $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'activity (title, period, user_id) VALUES (?, ?, ?) RETURNING id');
         $startedAt = $activity['started_at'];
         $finishedAt = !empty($activity['finished_at']) ? $activity['finished_at'] : '';
         $sth->execute([
@@ -213,11 +213,11 @@ $app->post('/activities', function (Request $request, Response $response) {
         if (count($activity['tags']) > 0) {
             $tags = [];
             foreach ($activity['tags'] as $tag) {
-                $sth = $this->db->prepare('SELECT id FROM tag WHERE LOWER(title) = LOWER(?)');
+                $sth = $this->db->prepare('SELECT id FROM '.DB_PREFIX.'tag WHERE LOWER(title) = LOWER(?)');
                 $sth->execute([$tag]);
                 $id = $sth->fetchColumn();
                 if ($id === false) {
-                    $sth = $this->db->prepare('INSERT INTO tag (title) VALUES (?) RETURNING id');
+                    $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'tag (title) VALUES (?) RETURNING id');
                     $sth->execute([$tag]);
                     $id = $sth->fetchColumn();
                 }
@@ -228,7 +228,7 @@ $app->post('/activities', function (Request $request, Response $response) {
             }
 
             $placeholders = substr(str_repeat('(?, ?), ', count($tags)), 0, -2);
-            $sth = $this->db->prepare("INSERT INTO activity_tag (activity_id, tag_id) VALUES $placeholders");
+            $sth = $this->db->prepare("INSERT INTO ".DB_PREFIX."activity_tag (activity_id, tag_id) VALUES $placeholders");
             $params = [];
             foreach ($tags as $tag) {
                 array_push($params, $activity['id'], $tag['id']);
@@ -268,7 +268,7 @@ $app->put('/activities/{id:\d+}', function (Request $request, Response $response
     try {
         $this->db->beginTransaction();
 
-        $sth = $this->db->prepare('UPDATE activity SET title = ?, period = ? WHERE id = ? AND user_id = ?');
+        $sth = $this->db->prepare('UPDATE '.DB_PREFIX.'activity SET title = ?, period = ? WHERE id = ? AND user_id = ?');
         $startedAt = $activity['started_at'];
         $finishedAt = !empty($activity['finished_at']) ? $activity['finished_at'] : '';
         $sth->execute([
@@ -282,17 +282,17 @@ $app->put('/activities/{id:\d+}', function (Request $request, Response $response
             return $response->withJson(['error' => 'activity not found'], 404);
         }
 
-        $sth = $this->db->prepare('DELETE FROM activity_tag WHERE activity_id = ?');
+        $sth = $this->db->prepare('DELETE FROM '.DB_PREFIX.'activity_tag WHERE activity_id = ?');
         $sth->execute([$activity['id']]);
 
         if (count($activity['tags']) > 0) {
             $tags = [];
             foreach ($activity['tags'] as $tag) {
-                $sth = $this->db->prepare('SELECT id FROM tag WHERE LOWER(title) = LOWER(?)');
+                $sth = $this->db->prepare('SELECT id FROM '.DB_PREFIX.'tag WHERE LOWER(title) = LOWER(?)');
                 $sth->execute([$tag]);
                 $id = $sth->fetchColumn();
                 if ($id === false) {
-                    $sth = $this->db->prepare('INSERT INTO tag (title) VALUES (?) RETURNING id');
+                    $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'tag (title) VALUES (?) RETURNING id');
                     $sth->execute([$tag]);
                     $id = $sth->fetchColumn();
                 }
@@ -303,7 +303,7 @@ $app->put('/activities/{id:\d+}', function (Request $request, Response $response
             }
 
             $placeholders = substr(str_repeat('(?, ?), ', count($activity['tags'])), 0, -2);
-            $sth = $this->db->prepare("INSERT INTO activity_tag (activity_id, tag_id) VALUES $placeholders");
+            $sth = $this->db->prepare("INSERT INTO ".DB_PREFIX."activity_tag (activity_id, tag_id) VALUES $placeholders");
             $params = [];
             foreach ($tags as $tag) {
                 array_push($params, $activity['id'], $tag['id']);
@@ -330,7 +330,7 @@ $app->delete('/activities/{id:\d+}', function (Request $request, Response $respo
     try {
         $this->db->beginTransaction();
 
-        $sth = $this->db->prepare('SELECT * FROM activity WHERE id = ? AND user_id = ?');
+        $sth = $this->db->prepare('SELECT * FROM '.DB_PREFIX.'activity WHERE id = ? AND user_id = ?');
         $sth->execute([
             $args['id'],
             $this->userId,
@@ -339,10 +339,10 @@ $app->delete('/activities/{id:\d+}', function (Request $request, Response $respo
             return $response->withJson(['error' => 'activity not found'], 404);
         }
 
-        $sth = $this->db->prepare('DELETE FROM activity_tag WHERE activity_id = ?');
+        $sth = $this->db->prepare('DELETE FROM '.DB_PREFIX.'activity_tag WHERE activity_id = ?');
         $sth->execute([$args['id']]);
 
-        $sth = $this->db->prepare('DELETE FROM activity WHERE id = ?');
+        $sth = $this->db->prepare('DELETE FROM '.DB_PREFIX.'activity WHERE id = ?');
         $sth->execute([$args['id']]);
 
         $this->db->commit();

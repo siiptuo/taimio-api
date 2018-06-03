@@ -2,17 +2,13 @@
 
 set -e
 
+DB_NAME=$(php <<< '<?php require "config.php"; echo DB_NAME;')
+
 function finish {
-    dropdb --if-exists $TAIMIO_DBNAME
+    dropdb --if-exists $DB_NAME
     [ $PHP_PID ] && kill $PHP_PID
 }
 trap finish EXIT
-
-export TAIMIO_SECRET=testing
-export PHINX_DBHOST=localhost
-export PHINX_DBNAME=$TAIMIO_DBNAME
-export PHINX_DBUSER=$TAIMIO_USERNAME
-export PHINX_DBPASS=$TAIMIO_PASSWORD
 
 echo ''
 echo '==============='
@@ -20,10 +16,10 @@ echo 'Create database'
 echo '==============='
 echo ''
 
-dropdb --if-exists $TAIMIO_DBNAME
-createdb $TAIMIO_DBNAME
+dropdb --if-exists $DB_NAME
+createdb $DB_NAME
 
-vendor/bin/phinx migrate -e testing
+vendor/bin/phinx migrate
 
 echo ''
 echo '=============='

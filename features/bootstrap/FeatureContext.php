@@ -1,5 +1,7 @@
 <?php
 
+require 'config.php';
+
 use Behat\Behat\Tester\Exception\PendingException;
 use Behat\Behat\Context\Context;
 use Behat\Behat\Context\SnippetAcceptingContext;
@@ -12,7 +14,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
     public function __construct()
     {
         $this->client = new GuzzleHttp\Client();
-        $this->db = new PDO('pgsql:dbname='.getenv('TAIMIO_DBNAME'), getenv('TAIMIO_USERNAME'), getenv('TAIMIO_PASSWORD'), [
+        $this->db = new PDO('pgsql:dbname='.DB_NAME, DB_USER, DB_PASS, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_EMULATE_PREPARES => false,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -26,10 +28,10 @@ class FeatureContext implements Context, SnippetAcceptingContext
      */
     public function after(AfterScenarioScope $scope)
     {
-        $this->db->query('TRUNCATE activity RESTART IDENTITY CASCADE');
-        $this->db->query('TRUNCATE activity_tag RESTART IDENTITY CASCADE');
-        $this->db->query('TRUNCATE tag RESTART IDENTITY CASCADE');
-        $this->db->query('TRUNCATE "user" RESTART IDENTITY CASCADE');
+        $this->db->query('TRUNCATE '.DB_PREFIX.'activity RESTART IDENTITY CASCADE');
+        $this->db->query('TRUNCATE '.DB_PREFIX.'activity_tag RESTART IDENTITY CASCADE');
+        $this->db->query('TRUNCATE '.DB_PREFIX.'tag RESTART IDENTITY CASCADE');
+        $this->db->query('TRUNCATE "'.DB_PREFIX.'user" RESTART IDENTITY CASCADE');
         $this->users = [];
         $this->tags = [];
     }
@@ -107,7 +109,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
             return;
         }
         $password = password_hash('1234', PASSWORD_DEFAULT);
-        $sth = $this->db->prepare('INSERT INTO "user" (username, password) VALUES (?, ?) RETURNING id');
+        $sth = $this->db->prepare('INSERT INTO "'.DB_PREFIX.'user" (username, password) VALUES (?, ?) RETURNING id');
         $sth->execute([$username, $password]);
         $this->users[$username] = [
             'id' => $sth->fetchColumn(),
@@ -122,7 +124,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
     public function theseIsAUserNamedWithPassword($username, $password)
     {
         $password = password_hash($password, PASSWORD_DEFAULT);
-        $sth = $this->db->prepare('INSERT INTO "user" (username, password) VALUES (?, ?) RETURNING id');
+        $sth = $this->db->prepare('INSERT INTO "'.DB_PREFIX.'user" (username, password) VALUES (?, ?) RETURNING id');
         $sth->execute([$username, $password]);
         $this->users[$username] = [
             'id' => $sth->fetchColumn(),
@@ -141,7 +143,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
         $title = trim(substr($activity, 0, $s));
         $tags = preg_split('/\s*#/', substr($activity, $s + 1));
 
-        $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?)');
+        $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'activity (title, period, user_id) VALUES (?, ?, ?)');
         $sth->execute([
             $title,
             "[{(new DateTime())->format('Y-m-d H:i:s')},{(new DateTime())->format('Y-m-d H:i:s')})",
@@ -154,7 +156,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
      */
     public function userHasStartedActivityAt($user, $activity, $startedAt)
     {
-        $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?)');
+        $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'activity (title, period, user_id) VALUES (?, ?, ?)');
         $sth->execute([
             $activity,
             "[$startedAt,)",
@@ -178,7 +180,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
         $userId = $this->users[$user]['id'];
         $token = bin2hex(random_bytes(16));
 
-        $sth = $this->db->prepare('INSERT INTO token (token, user_id) VALUES (?, ?)');
+        $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'token (token, user_id) VALUES (?, ?)');
         $sth->execute([hash('sha256', $token), $userId]);
 
         $this->token = $token;
@@ -219,7 +221,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
     {
         foreach ($activityTable as $activityHash) {
             $this->thereIsAUserNamed($activityHash['user']);
-            $sth = $this->db->prepare('INSERT INTO activity (title, period, user_id) VALUES (?, ?, ?) RETURNING id');
+            $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'activity (title, period, user_id) VALUES (?, ?, ?) RETURNING id');
             $sth->execute([
                 $activityHash['title'],
                 "[{$activityHash['started_at']},{$activityHash['finished_at']})",
@@ -229,11 +231,11 @@ class FeatureContext implements Context, SnippetAcceptingContext
             $tags = array_map('trim', explode(',', $activityHash['tags']));
             foreach ($tags as $tag) {
                 if (!isset($this->tags[$tag])) {
-                    $sth = $this->db->prepare('INSERT INTO tag (title) VALUES (?) RETURNING id');
+                    $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'tag (title) VALUES (?) RETURNING id');
                     $sth->execute([$tag]);
                     $this->tags[$tag] = $sth->fetchColumn();
                 }
-                $sth = $this->db->prepare('INSERT INTO activity_tag (activity_id, tag_id) VALUES (?, ?)');
+                $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'activity_tag (activity_id, tag_id) VALUES (?, ?)');
                 $sth->execute([$activityId, $this->tags[$tag]]);
             }
         }
@@ -244,7 +246,7 @@ class FeatureContext implements Context, SnippetAcceptingContext
      */
     public function userUserHasActivity($user, $activity)
     {
-        $sth = $this->db->prepare('SELECT EXISTS(SELECT 1 FROM activity WHERE title = ? AND user_id = ?)');
+        $sth = $this->db->prepare('SELECT EXISTS(SELECT 1 FROM '.DB_PREFIX.'activity WHERE title = ? AND user_id = ?)');
         $sth->execute([$activity, $this->users[$user]['id']]);
         PHPUnit_Framework_Assert::assertTrue($sth->fetchColumn());
     }

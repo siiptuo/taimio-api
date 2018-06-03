@@ -18,8 +18,12 @@ class ActivitySeeder extends AbstractSeed
     public function run()
     {
         $words = require 'words.php';
-        $users = $this->fetchAll('SELECT * from "user"');
-        $tags = $this->fetchAll('SELECT * FROM tag');
+
+        $userTable = $this->getAdapter()->getAdapterTableName('user');
+        $users = $this->fetchAll("SELECT * from \"$userTable\"");
+
+        $tagTable = $this->getAdapter()->getAdapterTableName('tag');
+        $tags = $this->fetchAll("SELECT * FROM $tagTable");
 
         $activityTagData = [];
 
