@@ -7,9 +7,7 @@ class UseRangeType extends AbstractMigration
     public function up()
     {
         $activityTable = $this->getAdapter()->getAdapterTableName('activity');
-        $this->execute('CREATE EXTENSION btree_gist');
         $this->execute("ALTER TABLE $activityTable ADD COLUMN period tstzrange");
-        $this->execute("ALTER TABLE $activityTable ADD EXCLUDE USING GIST (user_id WITH =, period WITH &&)");
         $activities = $this->fetchAll("SELECT * FROM $activityTable");
         foreach ($activities as $activity) {
             $startedAt = (new DateTime($activity['started_at']))->format(DateTime::ATOM);
@@ -46,6 +44,5 @@ class UseRangeType extends AbstractMigration
         $this->table('activity')
             ->removeColumn('period')
             ->save();
-        $this->execute('DROP EXTENSION btree_gist');
     }
 }

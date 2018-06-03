@@ -81,6 +81,25 @@ function validateDate($date, $format = 'Y-m-d')
     return $d && $d->format($format) === $date;
 }
 
+function hasFreeSpace($db, $userId, $start, $end, $activityId = null)
+{
+    $query = 'SELECT * FROM '.DB_PREFIX.'activity WHERE period && ? AND user_id = ?';
+    $params = [
+        "[$start,$end)",
+        $userId,
+    ];
+    if (is_numeric($activityId)) {
+        $query .= ' AND id != ?';
+        $params[] = $activityId;
+    }
+    $query .= ' LIMIT 1';
+
+    $sth = $db->prepare($query);
+    $sth->execute($params);
+
+    return $sth->rowCount() === 0;
+}
+
 $app->get('/activities', function (Request $request, Response $response) {
     $queryParams = $request->getQueryParams();
 
@@ -185,20 +204,24 @@ $app->get('/activities/{id}', function (Request $request, Response $response, ar
 })->add($authMiddleware);
 
 $app->post('/activities', function (Request $request, Response $response) {
+    $data = $request->getParsedBody();
+
+    $activity = [];
+    $activity['title'] = $data['title'];
+    $activity['started_at'] = (new DateTime($data['started_at']))->format(DateTime::ATOM);
+    if (!empty($data['finished_at'])) {
+        $activity['finished_at'] = (new DateTime($data['finished_at']))->format(DateTime::ATOM);
+    } else {
+        $activity['finished_at'] = null;
+    }
+    $activity['tags'] = $data['tags'];
+
+    if (!hasFreeSpace($this->db, $this->userId, $activity['started_at'], $activity['finished_at'])) {
+        return $response->withJson(['error' => 'overlap'], 400);
+    }
+
     try {
         $this->db->beginTransaction();
-
-        $data = $request->getParsedBody();
-
-        $activity = [];
-        $activity['title'] = $data['title'];
-        $activity['started_at'] = (new DateTime($data['started_at']))->format(DateTime::ATOM);
-        if (!empty($data['finished_at'])) {
-            $activity['finished_at'] = (new DateTime($data['finished_at']))->format(DateTime::ATOM);
-        } else {
-            $activity['finished_at'] = null;
-        }
-        $activity['tags'] = $data['tags'];
 
         $sth = $this->db->prepare('INSERT INTO '.DB_PREFIX.'activity (title, period, user_id) VALUES (?, ?, ?) RETURNING id');
         $startedAt = $activity['started_at'];
@@ -242,11 +265,6 @@ $app->post('/activities', function (Request $request, Response $response) {
     } catch (PDOException $e) {
         $this->db->rollBack();
 
-        // Detect overlapping activities.
-        if ($e->getCode() === '23P01') {
-            return $response->withJson(['error' => 'overlap'], 400);
-        }
-
         return $response->withJson(['error' => $e->getMessage()], 500);
     }
 })->add($authMiddleware);
@@ -264,6 +282,10 @@ $app->put('/activities/{id:\d+}', function (Request $request, Response $response
         $activity['finished_at'] = null;
     }
     $activity['tags'] = $data['tags'];
+
+    if (!hasFreeSpace($this->db, $this->userId, $activity['started_at'], $activity['finished_at'], $activity['id'])) {
+        return $response->withJson(['error' => 'overlap'], 400);
+    }
 
     try {
         $this->db->beginTransaction();
@@ -316,11 +338,6 @@ $app->put('/activities/{id:\d+}', function (Request $request, Response $response
         return $response->withJson($activity);
     } catch (PDOException $e) {
         $this->db->rollBack();
-
-        // Detect overlapping activities.
-        if ($e->getCode() === '23P01') {
-            return $response->withJson(['error' => 'overlap'], 400);
-        }
 
         return $response->withJson(['error' => $e->getMessage()], 500);
     }
